@@ -6,7 +6,8 @@ Piano transcription is the task to transcribe piano recordings to MIDI. That is,
 ## Inference using pretrained model
 First, install dependencies in requirements.txt
 
-Users can execute the following command to inference an audio recording in wav format.
+Then, execute the following command to inference an audio recording in wav format.
+
 `python3 pytorch/main_inference.py --cuda --audio_path='examples/cut_liszt.wav'
 `
 
@@ -57,7 +58,7 @@ dataset_root
 </pre>
 
 ### 1. Train
-The baseline system is built using "Onsets and frames: Dual-objective piano transcription." [2]. There are some difference including:
+The baseline system is built using "Onsets and frames: Dual-objective piano transcription." [2]. There are some difference in the implementation including:
 1) GRU is used instead of LSTM. 
 2) A sampling rate of 32 kHz is used instead of 16 kHz. 
 3) A hop size of 10 ms is used instead of 31.25 ms. 
@@ -79,6 +80,19 @@ The training takes xxx to train using xxx. The training looks like:
 The statistics during training looks like:
 
 Evaluation results using mir_eval toolbox are:
+
+Demos
+
+Andras Schiff: J.S.Bach - French Suites [[wav]](examples/cut_bach.wav) [[transcribed_midi]](appendixes/cut_bach.mid)
+Transcribed MIDI:
+
+<img src="appendixes/cut_bach.png">
+
+Lang Lang: Franz Liszt - Love Dream (Liebestraum) [[wav]](examples/cut_liszt.wav) [[transcribed_midi]](appendixes/cut_liszt.mid)
+Transcribed MIDI:
+
+<img src="appendixes/cut_liszt.png">
+
 
 
 ## Reference
