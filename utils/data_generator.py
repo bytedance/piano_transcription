@@ -116,6 +116,7 @@ class MaestroDataset(object):
         x = np.abs(x) ** 2
 
         fig, axs = plt.subplots(8, 1, sharex=True, figsize=(30, 30))
+        fontsize = 20
         axs[0].matshow(np.log(x), origin='lower', aspect='auto', cmap='jet')
         axs[1].matshow(data_dict['frame_roll'].T, origin='lower', aspect='auto', cmap='jet')
         axs[2].matshow(data_dict['onset_roll'].T, origin='lower', aspect='auto', cmap='jet')
@@ -124,15 +125,15 @@ class MaestroDataset(object):
         axs[5].matshow(data_dict['velocity_roll'].T, origin='lower', aspect='auto', cmap='jet')
         axs[6].matshow(data_dict['mask_roll'].T, origin='lower', aspect='auto', cmap='jet')
         axs[7].matshow(data_dict['pedal_roll'][:, None].T, origin='lower', aspect='auto', cmap='jet')
-        axs[0].set_title('Log spectrogram')
-        axs[1].set_title('frame_roll')
-        axs[2].set_title('onset_roll')
-        axs[3].set_title('offset_roll')
-        axs[4].set_title('distance_roll')
-        axs[5].set_title('velocity_roll')
-        axs[6].set_title('mask_roll')
-        axs[7].set_title('pedal_roll')
-        plt.show()
+        axs[0].set_title('Log spectrogram', fontsize=fontsize)
+        axs[1].set_title('frame_roll', fontsize=fontsize)
+        axs[2].set_title('onset_roll', fontsize=fontsize)
+        axs[3].set_title('offset_roll', fontsize=fontsize)
+        axs[4].set_title('distance_roll', fontsize=fontsize)
+        axs[5].set_title('velocity_roll', fontsize=fontsize)
+        axs[6].set_title('mask_roll', fontsize=fontsize)
+        axs[7].set_title('pedal_roll', fontsize=fontsize)
+        plt.tight_layout(1, 1, 1)
         plt.savefig(fig_path)
 
         print('Write out to {}, {}, {}!'.format(audio_path, midi_path, fig_path))

@@ -66,7 +66,7 @@ def train(args):
     segment_samples = int(segment_seconds * sample_rate)
     frames_per_second = config.frames_per_second
     classes_num = config.classes_num
-    num_workers = 0
+    num_workers = 8
 
     # Loss function
     loss_func = get_loss_func(loss_type)
@@ -321,6 +321,7 @@ def inference(args):
       batch_size: int
       iteration: int, iteration of model to be loaded
       cuda: bool
+      audio_path: str
     """
 
     # Arugments & parameters
