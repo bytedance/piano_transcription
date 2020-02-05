@@ -8,9 +8,47 @@ import math
 import time
 import logging
 import _pickle as cPickle
+import librosa
 import matplotlib.pyplot as plt
  
-from utilities import create_folder
+from utilities import create_folder, read_midi, TargetProcessor
+import config
+
+
+def visualization(args):
+
+    audio_name = 'cut_bach'
+    midi_path = 'results/{}.mid'.format(audio_name)
+    audio_path = 'examples/{}.wav'.format(audio_name)
+    fig_path = 'debug/{}.png'.format(audio_name)
+    create_folder(os.path.dirname(fig_path))
+
+    # Load MIDI
+    midi_dict = read_midi(midi_path)
+    
+    segment_seconds = 20    # Clip length
+    target_processor = TargetProcessor(segment_seconds, 
+        config.frames_per_second, config.begin_note, config.classes_num)
+
+    (data_dict, note_events) = target_processor.process(0, 
+        midi_dict['midi_event_time'], midi_dict['midi_event'])
+
+    # Spectrogram
+    (audio, _) = librosa.core.load(audio_path, sr=config.sample_rate, mono=True)
+    x = librosa.core.stft(y=audio, n_fft=2048, hop_length=320, window='hann', center=True)
+    x = np.abs(x) ** 2
+
+    # Plot
+    fig, axs = plt.subplots(2, 1, figsize=(8, 4), sharex=True)
+    axs[0].matshow(np.log(x), origin='lower', aspect='auto', cmap='jet')
+    axs[1].matshow(data_dict['frame_roll'].T, origin='lower', aspect='auto', cmap='jet', vmin=-1, vmax=1)
+    axs[0].set_title('Log spectrogram')
+    axs[1].set_title('Transcribed MIDI')
+    axs[0].xaxis.set_ticks([])
+    axs[1].xaxis.set_ticks([])
+    plt.tight_layout()
+    plt.savefig(fig_path)
+    print('Write fig to {}'.format(fig_path))
 
 
 def plot_statistics(args):
@@ -153,6 +191,8 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers(dest='mode')
 
     # Plot statistics
+    parser_visualization = subparsers.add_parser('visualization')
+
     parser_plot = subparsers.add_parser('plot')
     parser_plot.add_argument('--workspace', type=str, required=True, help='Directory of your workspace.')
     parser_plot.add_argument('--select', type=str, required=True)
@@ -160,7 +200,10 @@ if __name__ == '__main__':
     # Parse arguments
     args = parser.parse_args()
 
-    if args.mode == 'plot':
+    if args.mode == 'visualization':
+        visualization(args)
+
+    elif args.mode == 'plot':
         plot_statistics(args)
 
     else:

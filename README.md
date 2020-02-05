@@ -4,7 +4,7 @@
 Piano transcription is the task to transcribe piano recordings to MIDI. That is, transcribe waveform to symbolic music notes. This codebase contains PyTorch implementation of 1. Inference a piano audio recording to MIDI using pretrained model; 2. Training a piano transcription system.
 
 ## Inference using pretrained model
-First, install dependencies in requirements.txt
+This allows users to transcribe an audio recording using a pretrained model. First, install dependencies in requirements.txt
 
 Then, execute the following command to inference an audio recording in wav format.
 
@@ -14,6 +14,8 @@ Then, execute the following command to inference an audio recording in wav forma
 Demo: https://www.youtube.com/watch?v=easks37Q4iE
 
 ## Training a piano transcription system
+
+This section provides instructions of training a piano transcription system.
 
 ### 0. Prepare data
 MAESTRO dataset [1] is used for training the piano transcription system. MAESTRO consists of over 200 hours of virtuosic piano performances captured with fine alignment (~3 ms) between note labels and audio waveforms. MAESTRO dataset can be downloaded from https://magenta.tensorflow.org/datasets/maestro. This codebase used MAESTRO V2.0.0 for training.
@@ -84,11 +86,13 @@ Evaluation results using mir_eval toolbox are:
 Demos
 
 Andras Schiff: J.S.Bach - French Suites [[wav]](examples/cut_bach.wav) [[transcribed_midi]](appendixes/cut_bach.mid)
+
 Transcribed MIDI:
 
 <img src="appendixes/cut_bach.png">
 
 Lang Lang: Franz Liszt - Love Dream (Liebestraum) [[wav]](examples/cut_liszt.wav) [[transcribed_midi]](appendixes/cut_liszt.mid)
+
 Transcribed MIDI:
 
 <img src="appendixes/cut_liszt.png">

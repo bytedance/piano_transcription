@@ -16,7 +16,7 @@ python3 pytorch/main_inference.py --cuda --audio_path='examples/cut_liszt.wav'
 python3 pytorch/main.py train --workspace=$WORKSPACE --model_type='Google_onset_frame' --loss_type='onset_frame_bce' --augmentation='none' --batch_size=16 --learning_rate=1e-3 --resume_iteration=0 --early_stop=2000000 --cuda
 
 # Plot training statistics
-python3 utils/plot_statistics.py plot --workspace=$WORKSPACE --select=1a
+python3 utils/plot_results.py plot --workspace=$WORKSPACE --select=1a
 
 # ============ Evaluate ============
 python3 pytorch/main.py evaluate --workspace=$WORKSPACE --model_type='Google_onset_frame' --loss_type='onset_frame_bce' --augmentation='none' --batch_size=16 --iteration=80000 --cuda

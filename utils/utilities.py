@@ -9,6 +9,7 @@ from scipy import stats
 import datetime
 import collections
 import _pickle as cPickle
+from mido import MidiFile
 
 from piano_vad import note_detection_with_onset
 import config
@@ -82,6 +83,46 @@ def pad_truncate_sequence(x, max_len):
         return np.concatenate((x, np.zeros(max_len - len(x))))
     else:
         return x[0 : max_len]
+
+
+def read_midi(midi_path):
+    """Parse MIDI file.
+
+    Args:
+      midi_path: str
+
+    Returns:
+      midi_dict: dict, e.g. {
+        'midi_event': ['program_change channel=0 program=0 time=0', ...],
+        'midi_event_time': [0., ...]}
+    """
+
+    midi_file = MidiFile(midi_path)
+    ticks_per_beat = midi_file.ticks_per_beat
+
+    assert len(midi_file.tracks) == 2
+    """The first track contains tempo, time signature. The second track 
+    contains piano events."""
+
+    microseconds_per_beat = midi_file.tracks[0][0].tempo
+    beats_per_second = 1e6 / microseconds_per_beat
+    ticks_per_second = ticks_per_beat * beats_per_second
+
+    message_list = []
+
+    ticks = 0
+    time_in_second = []
+
+    for message in midi_file.tracks[1]:
+        message_list.append(str(message))
+        ticks += message.time
+        time_in_second.append(ticks / ticks_per_second)
+
+    midi_dict = {
+        'midi_event': np.array(message_list), 
+        'midi_event_time': np.array(time_in_second)}
+
+    return midi_dict
 
 
 class TargetProcessor(object):
@@ -332,17 +373,26 @@ def write_events_to_midi(start_time, note_events, midi_path):
         ...]
       midi_path: str
     """
-    from mido import Message, MidiFile, MidiTrack
+    from mido import Message, MidiFile, MidiTrack, MetaMessage
     
     # This configuration is the same as MIDIs in MAESTRO dataset
     ticks_per_beat = 384
     beats_per_second = 2
     ticks_per_second = ticks_per_beat * beats_per_second
+    microseconds_per_beat = int(1e6 // beats_per_second)
 
     midi_file = MidiFile()
     midi_file.ticks_per_beat = ticks_per_beat
-    track = MidiTrack()
-    midi_file.tracks.append(track)
+
+    # Track 0
+    track0 = MidiTrack()
+    track0.append(MetaMessage('set_tempo', tempo=microseconds_per_beat, time=0))
+    track0.append(MetaMessage('time_signature', numerator=4, denominator=4, time=0))
+    track0.append(MetaMessage('end_of_track', time=1))
+    midi_file.tracks.append(track0)
+
+    # Track 1
+    track1 = MidiTrack()
     
     # Message rolls of MIDI
     message_roll = []
@@ -365,7 +415,9 @@ def write_events_to_midi(start_time, note_events, midi_path):
         if this_ticks >= 0:
             diff_ticks = this_ticks - previous_ticks
             previous_ticks = this_ticks
-            track.append(Message('note_on', note=message['midi_note'], velocity=message['velocity'], time=diff_ticks))
+            track1.append(Message('note_on', note=message['midi_note'], velocity=message['velocity'], time=diff_ticks))
+    track1.append(MetaMessage('end_of_track', time=1))
+    midi_file.tracks.append(track1)
 
     midi_file.save(midi_path)
 
