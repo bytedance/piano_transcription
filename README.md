@@ -92,7 +92,7 @@ Evaluation results using mir_eval toolbox are:
 | Google Onset-frame [1] | 0.892 | 0.948 | 0.797 | 0.760 |
 | Reproduced [1] | 0.881 | 0.940 | *0.638 | - |
 
-The symbol * indicates this repo processed offset depends on pedal, so the evaluation metric can be different from [2].
+The symbol * indicates the evaluation metric is be different from [2] because different processing of pedal.
 
 
 ## Visualization of piano transcription
