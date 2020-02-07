@@ -10,8 +10,8 @@ import logging
 from sklearn import metrics
 
 from utilities import (create_folder, traverse_folder, int16_to_float32, 
-    pad_truncate_sequence, TargetProcessor, sharp_output, sharp_output3d, 
-    PostProcessor, write_events_to_midi, note_to_freq)
+    pad_truncate_sequence, TargetProcessor, sharp_output, PostProcessor, 
+    write_events_to_midi, note_to_freq)
 from pytorch_utils import forward_dataloader, forward, WaveformTester
 from piano_vad import note_detection_with_onset
 import config
@@ -78,18 +78,6 @@ class SegmentEvaluator(object):
         statistics = {}
         output_dict = forward_dataloader(self.model, dataloader, self.batch_size)
         
-        '''
-        # Sharp onsets and offsets
-        if 'onset_output' in output_dict.keys():
-            output_dict['onset_output'] = sharp_output3d(
-                output_dict['onset_output'], 
-                threshold=self.onset_threshold)
-
-        if 'offset_output' in output_dict.keys():
-            output_dict['offset_output'] = sharp_output3d(
-                output_dict['offset_output'], 
-                threshold=self.offset_threshold)
-        '''
         # Frame and onset evaluation
         statistics['frame_f1'] = f1_score(output_dict['frame_roll'], 
             output_dict['frame_output'], output_dict['mask_roll'], 
@@ -190,17 +178,6 @@ class Evaluator(object):
                     for key in output_dict.keys():
                         output_dict[key] = pad_truncate_sequence(
                             output_dict[key], len(target_dict['frame_roll']))
-                    
-                    # Sharp onsets and offsets
-                    if 'onset_output' in output_dict.keys():
-                        output_dict['onset_output'] = sharp_output(
-                            output_dict['onset_output'], 
-                            threshold=self.onset_threshold)
-
-                    if 'offset_output' in output_dict.keys():
-                        output_dict['offset_output'] = sharp_output(
-                            output_dict['offset_output'], 
-                            threshold=self.offset_threshold)
 
                     # Frame and onset evaluation
                     (frame_precision, frame_recall, frame_f1) = precision_recall_f1(
@@ -213,20 +190,25 @@ class Evaluator(object):
                     if 'onset_output' in output_dict.keys():
                         onset_f1 = f1_score(target_dict['onset_roll'], 
                             output_dict['onset_output'], target_dict['mask_roll'], 
-                            0.5)
+                            self.onset_threshold)
                         statistics['onset_f1'].append(onset_f1)
                     
                     if 'offset_output' in output_dict.keys():
                         offset_f1 = f1_score(target_dict['offset_roll'], 
                             output_dict['offset_output'], target_dict['mask_roll'], 
-                            0.5)
+                            self.offset_threshold)
                         ['offset_f1'].append(offset_f1)
+
+                    # ====== Evaluate with mir_eval toolbox ======
+                    # Sharp onsets and offsets
+                    output_dict = self.post_processor.sharp_output_dict(
+                        output_dict, self.onset_threshold, self.offset_threshold)
 
                     # Post process output_dict to piano notes
                     (est_on_off_pairs, est_piano_notes) = self.post_processor.\
                         output_dict_to_piano_notes(output_dict, self.frame_threshold)
 
-                    # Evaluate with mir_eval toolbox
+                    # Evaluate note based statistics with onset
                     note_precision, note_recall, note_f1, _ = \
                         mir_eval.transcription.precision_recall_f1_overlap(
                             ref_on_off_pairs, note_to_freq(ref_piano_notes), 
@@ -237,7 +219,7 @@ class Evaluator(object):
                     statistics['tolerant_onset_precision'].append(note_precision)
                     statistics['tolerant_onset_recall'].append(note_recall)
 
-                    # Offset
+                    # Evaluate note based statistics with onset & offset
                     if True:
                         note_off_precision, note_off_recall, note_off_f1, _ = \
                             mir_eval.transcription.precision_recall_f1_overlap(

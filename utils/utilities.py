@@ -451,19 +451,6 @@ def sharp_output(input, threshold=0.3):
     return output
 
 
-def sharp_output3d(input, threshold):
-    """Used for sharping onset or offset. E.g. when threshold=0.3, for a note, 
-    [0, 0.1, 0.4, 0.7, 0, 0] will be sharped to [0, 0, 0, 1, 0, 0]
-
-    Args:
-      input: (N, frames_num, classes_num)
-
-    Returns:
-      output: (N, frames_num, classes_num)
-    """
-    return np.array([sharp_output(x, threshold) for x in input])
-
-
 class PostProcessor(object):
     def __init__(self, frames_per_second, classes_num):
         """Postprocess the system output.
@@ -475,6 +462,33 @@ class PostProcessor(object):
         self.frames_per_second = frames_per_second
         self.classes_num = classes_num
         self.begin_note = config.begin_note
+
+    def sharp_output_dict(self, output_dict, onset_threshold, offset_threshold):
+        """Sharp onsets and offsets.
+
+        Args:
+          output_dict: {
+            'onset_output': (frames_num, classes_num), 
+            'offset_output': (frames_num, classes_num)}
+          onset_threshold: float
+          offset_threshold: float
+
+        Returns:
+          output_dict: {
+            'onset_output': (frames_num, classes_num), 
+            'offset_output': (frames_num, classes_num)}
+        """
+        if 'onset_output' in output_dict.keys():
+            output_dict['onset_output'] = sharp_output(
+                output_dict['onset_output'], 
+                threshold=onset_threshold)
+
+        if 'offset_output' in output_dict.keys():
+            output_dict['offset_output'] = sharp_output(
+                output_dict['offset_output'], 
+                threshold=offset_threshold)
+
+        return output_dict
 
     def output_dict_to_piano_notes(self, output_dict, frame_threshold):
         """Postprocess output_dict to piano notes.
@@ -510,7 +524,7 @@ class PostProcessor(object):
         return est_on_off_pairs, est_piano_notes
 
     def on_off_pairs_notes_to_midi_events(self, est_on_off_pairs, est_piano_notes):
-        """Combine on and off pairs and piano notes to midi events
+        """Combine on and off pairs and piano notes to midi events.
         """
         midi_events = []
         for i in range(est_on_off_pairs.shape[0]):

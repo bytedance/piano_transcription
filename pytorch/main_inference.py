@@ -63,24 +63,18 @@ def inference(args):
     waveform_tester = WaveformTester(model, segment_samples, batch_size)
     output_dict = waveform_tester.forward(audio)
 
-    # TODO
-    # Sharp onsets and offsets
-    """
-    if 'onset_output' in output_dict.keys():
-        output_dict['onset_output'] = sharp_output(
-            output_dict['onset_output'], 
-            threshold=self.onset_threshold)
-
-    if 'offset_output' in output_dict.keys():
-        output_dict['offset_output'] = sharp_output(
-            output_dict['offset_output'], 
-            threshold=self.offset_threshold)
-    """
     # Postprocess
     post_processor = PostProcessor(frames_per_second, classes_num)
+
+    # Sharp onsets and offsets
+    output_dict = post_processor.sharp_output_dict(
+        output_dict, onset_threshold=0.1, offset_threshold=0.3)
+
+    # Post process output_dict to piano notes
     (est_on_off_pairs, est_piano_notes) = post_processor.\
         output_dict_to_piano_notes(output_dict, frame_threshold=0.3)
 
+    # Combine on and off pairs and piano notes to midi events.
     est_note_events = post_processor.on_off_pairs_notes_to_midi_events(
         est_on_off_pairs, est_piano_notes)
 

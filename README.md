@@ -8,7 +8,9 @@ This allows users to transcribe an audio recording using a pretrained model. Fir
 
 Then, execute the following command to inference an audio recording in wav format.
 
-`python3 pytorch/main_inference.py --cuda --audio_path='examples/cut_liszt.wav'
+`
+CHECKPOINT_PATH="/mnt/cephfs_new_wj/speechsv/kongqiuqiang/workspaces/pub_piano_transcription/pretrained_checkpoints/Google_onset_frame_200000_iterations.pth"
+python3 pytorch/main_inference.py --cuda --checkpoint_path=$CHECKPOINT_PATH --audio_path='examples/cut_liszt.wav'
 `
 
 Demo: https://www.youtube.com/watch?v=easks37Q4iE
@@ -77,23 +79,29 @@ To train the systems, execute commands in runme.sh, which includes:
 5) Inference using trained model.
 
 ## Results
-The training takes xxx to train using xxx. The training looks like:
+The training is carried on two Tesla-V100-PCIE-32GB cards. The training speed is around 1 second / iteration. The system is trained for 200,000 iterations in around 2 days. The statistics during training looks like:
 
-The statistics during training looks like:
+<img src="appendixes/statistics.png">
+
+Notice the above curve are not final metrics evaluated with mir_eval. The metrics evaluated using mir_eval is usually higher than the above curve because mir_eval has tolerance in detecting onsets and offsets.
 
 Evaluation results using mir_eval toolbox are:
 
-Demos
+|  | Frame F1 | Note F1 | Note with offset | Note with offset & velocity |
+|:----------------------:|:--------:|:-------:|:----------------:|:---------------------------:|
+| Google Onset-frame [1] | 0.892 | 0.948 | 0.797 | 0.760 |
+| Reproduced [1] | 0.881 | 0.940 | *0.638 | - |
 
-Andras Schiff: J.S.Bach - French Suites [[wav]](examples/cut_bach.wav) [[transcribed_midi]](appendixes/cut_bach.mid)
+The symbol * indicates this repo processed offset depends on pedal, so the evaluation metric can be different from [2].
 
-Transcribed MIDI:
+
+## Visualization of piano transcription
+
+**Demo 1.** Andras Schiff: J.S.Bach - French Suites [[wav]](examples/cut_bach.wav) [[transcribed_midi]](appendixes/cut_bach.mid)
 
 <img src="appendixes/cut_bach.png">
 
-Lang Lang: Franz Liszt - Love Dream (Liebestraum) [[wav]](examples/cut_liszt.wav) [[transcribed_midi]](appendixes/cut_liszt.mid)
-
-Transcribed MIDI:
+**Demo 2.** Lang Lang: Franz Liszt - Love Dream (Liebestraum) [[wav]](examples/cut_liszt.wav) [[transcribed_midi]](appendixes/cut_liszt.mid)
 
 <img src="appendixes/cut_liszt.png">
 

@@ -10,7 +10,7 @@ WORKSPACE="/mnt/cephfs_new_wj/speechsv/kongqiuqiang/workspaces/pub_piano_transcr
 python3 utils/features.py pack_audio_files_to_hdf5 --dataset_dir=$DATASET_DIR --workspace=$WORKSPACE
 
 # ============ Inference using pretrained model ============
-CHECKPOINT_PATH='/mnt/cephfs_new_wj/speechsv/kongqiuqiang/workspaces/pub_piano_transcription/pretrained_checkpoints/Google_onset_frame_150000_iterations.pth'
+CHECKPOINT_PATH='/mnt/cephfs_new_wj/speechsv/kongqiuqiang/workspaces/pub_piano_transcription/pretrained_checkpoints/Google_onset_frame_200000_iterations.pth'
 python3 pytorch/main_inference.py --audio_path='examples/cut_liszt.wav' --checkpoint_path=$CHECKPOINT_PATH --cuda 
 
 # ============ Train ============
