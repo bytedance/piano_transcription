@@ -121,7 +121,7 @@ class WaveformTester(object):
         self.hop_samples = segment_samples // 2
 
     def forward(self, waveform):
-        """Inference a waveform.
+        """Inference the output probabilities of a waveform.
 
         Args:
           waveform: (waveform_len,)

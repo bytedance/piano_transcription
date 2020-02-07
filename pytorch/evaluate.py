@@ -17,13 +17,35 @@ from piano_vad import note_detection_with_onset
 import config
 
 
+def precision_score(target, output, mask, threshold=0.5):
+    binarized_output = (np.sign(output - threshold) + 1) / 2
+    binarized_output[np.where(binarized_output == 0.5)] = 1
+    target *= mask
+    binarized_output *= mask
+    return metrics.precision_score(target.flatten(), binarized_output.flatten())
+
+
+def recall_score(target, output, mask, threshold=0.5):
+    binarized_output = (np.sign(output - threshold) + 1) / 2
+    binarized_output[np.where(binarized_output == 0.5)] = 1
+    target *= mask
+    binarized_output *= mask
+    return metrics.recall_score(target.flatten(), binarized_output.flatten())
+
+
 def f1_score(target, output, mask, threshold=0.5):
     binarized_output = (np.sign(output - threshold) + 1) / 2
     binarized_output[np.where(binarized_output == 0.5)] = 1
     target *= mask
     binarized_output *= mask
-    
     return metrics.f1_score(target.flatten(), binarized_output.flatten())
+
+
+def precision_recall_f1(target, output, mask, threshold=0.5):
+    precision = precision_score(target, output, mask, threshold)
+    recall = recall_score(target, output, mask, threshold)
+    f1 = f1_score(target, output, mask, threshold)
+    return precision, recall, f1
     
 
 class SegmentEvaluator(object):
@@ -56,6 +78,7 @@ class SegmentEvaluator(object):
         statistics = {}
         output_dict = forward_dataloader(self.model, dataloader, self.batch_size)
         
+        '''
         # Sharp onsets and offsets
         if 'onset_output' in output_dict.keys():
             output_dict['onset_output'] = sharp_output3d(
@@ -66,7 +89,7 @@ class SegmentEvaluator(object):
             output_dict['offset_output'] = sharp_output3d(
                 output_dict['offset_output'], 
                 threshold=self.offset_threshold)
-
+        '''
         # Frame and onset evaluation
         statistics['frame_f1'] = f1_score(output_dict['frame_roll'], 
             output_dict['frame_output'], output_dict['mask_roll'], 
@@ -109,8 +132,8 @@ class Evaluator(object):
         self.begin_note = config.begin_note
         self.classes_num = config.classes_num
 
-        self.frame_threshold = 0.3
-        self.onset_threshold = 0.3
+        self.frame_threshold = 0.5
+        self.onset_threshold = 0.1
         self.offset_threshold = 0.3
 
         self.waveform_tester = WaveformTester(model, self.segment_samples, batch_size)
@@ -126,7 +149,8 @@ class Evaluator(object):
 
         (hdf5_names, hdf5_paths) = traverse_folder(self.feature_hdf5s_dir)
 
-        statistics = {'frame_f1': [], 'onset_f1': [], 'offset_f1': [], 
+        statistics = {'frame_f1': [], 'frame_precision': [], 'frame_recall': [],
+            'onset_f1': [], 'offset_f1': [], 
             'tolerant_onset_f1': [], 'tolerant_onset_precision': [], 
             'tolerant_onset_recall': [], 'tolerant_offset_precision': [], 
             'tolerant_offset_recall': [], 'tolerant_offset_f1': []}
@@ -166,7 +190,7 @@ class Evaluator(object):
                     for key in output_dict.keys():
                         output_dict[key] = pad_truncate_sequence(
                             output_dict[key], len(target_dict['frame_roll']))
-
+                    
                     # Sharp onsets and offsets
                     if 'onset_output' in output_dict.keys():
                         output_dict['onset_output'] = sharp_output(
@@ -179,19 +203,23 @@ class Evaluator(object):
                             threshold=self.offset_threshold)
 
                     # Frame and onset evaluation
-                    frame_f1 = f1_score(target_dict['frame_roll'], 
-                        output_dict['frame_output'], target_dict['mask_roll'], 
-                        self.frame_threshold)
+                    (frame_precision, frame_recall, frame_f1) = precision_recall_f1(
+                        target_dict['frame_roll'], output_dict['frame_output'], 
+                        target_dict['mask_roll'], self.frame_threshold)
+                    statistics['frame_precision'].append(frame_precision)
+                    statistics['frame_recall'].append(frame_recall)
                     statistics['frame_f1'].append(frame_f1)
 
                     if 'onset_output' in output_dict.keys():
                         onset_f1 = f1_score(target_dict['onset_roll'], 
-                            output_dict['onset_output'], target_dict['mask_roll'])
+                            output_dict['onset_output'], target_dict['mask_roll'], 
+                            0.5)
                         statistics['onset_f1'].append(onset_f1)
                     
                     if 'offset_output' in output_dict.keys():
                         offset_f1 = f1_score(target_dict['offset_roll'], 
-                            output_dict['offset_output'], target_dict['mask_roll'])
+                            output_dict['offset_output'], target_dict['mask_roll'], 
+                            0.5)
                         ['offset_f1'].append(offset_f1)
 
                     # Post process output_dict to piano notes
@@ -209,8 +237,8 @@ class Evaluator(object):
                     statistics['tolerant_onset_precision'].append(note_precision)
                     statistics['tolerant_onset_recall'].append(note_recall)
 
-                    # Evaluate with offset
-                    if False:
+                    # Offset
+                    if True:
                         note_off_precision, note_off_recall, note_off_f1, _ = \
                             mir_eval.transcription.precision_recall_f1_overlap(
                                 ref_on_off_pairs, note_to_freq(ref_piano_notes), 
@@ -225,7 +253,7 @@ class Evaluator(object):
                     string = ''
                     for key in statistics.keys():
                         if len(statistics[key]) > 0:
-                            string += '{}: {:.3f},'.format(key, statistics[key][-1])
+                            string += '{}: {:.3f}, '.format(key, statistics[key][-1])
                     logging.info(string)
 
                     # Debug

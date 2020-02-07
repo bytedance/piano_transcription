@@ -22,19 +22,18 @@ def inference(args):
     """
 
     # Arugments & parameters
-    device = torch.device('cuda') if args.cuda and torch.cuda.is_available() else torch.device('cpu')
+    checkpoint_path = args.checkpoint_path
     audio_path = args.audio_path
+    device = torch.device('cuda') if args.cuda and torch.cuda.is_available() else torch.device('cpu')
     
     sample_rate = config.sample_rate
     segment_seconds = config.segment_seconds
     segment_samples = int(segment_seconds * sample_rate)
     frames_per_second = config.frames_per_second
     classes_num = config.classes_num
-    batch_size = 4
+    batch_size = 16
 
     # Paths
-    checkpoint_path = '/mnt/cephfs_new_wj/speechsv/kongqiuqiang/workspaces/piano_transcription/checkpoints/main/CnnGoogle_onset_frame/loss_type=onset_frame_bce/augmentation=none/batch_size=32/100000_iterations.pth'
-    
     midi_path = 'results/{}.mid'.format(get_filename(audio_path))
     create_folder(os.path.dirname(midi_path))
 
@@ -60,10 +59,23 @@ def inference(args):
     # Load audio
     (audio, _) = librosa.core.load(audio_path, sr=sample_rate, mono=True)
 
-    # Inference
+    # Inference probabilities
     waveform_tester = WaveformTester(model, segment_samples, batch_size)
     output_dict = waveform_tester.forward(audio)
 
+    # TODO
+    # Sharp onsets and offsets
+    """
+    if 'onset_output' in output_dict.keys():
+        output_dict['onset_output'] = sharp_output(
+            output_dict['onset_output'], 
+            threshold=self.onset_threshold)
+
+    if 'offset_output' in output_dict.keys():
+        output_dict['offset_output'] = sharp_output(
+            output_dict['offset_output'], 
+            threshold=self.offset_threshold)
+    """
     # Postprocess
     post_processor = PostProcessor(frames_per_second, classes_num)
     (est_on_off_pairs, est_piano_notes) = post_processor.\
@@ -80,8 +92,9 @@ def inference(args):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--cuda', action='store_true', default=False)
+    parser.add_argument('--checkpoint_path', type=str, required=True)
     parser.add_argument('--audio_path', type=str, required=True)
+    parser.add_argument('--cuda', action='store_true', default=False)
     args = parser.parse_args()
 
     inference(args)

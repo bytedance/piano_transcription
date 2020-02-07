@@ -182,9 +182,11 @@ def train(args):
 
     for batch_data_dict in train_loader:
         # Evaluation
-        if iteration % 5000 == 0 and iteration > 0:
+        if iteration % 5000 == 0:# and iteration > 0:
             logging.info('------------------------------------')
             logging.info('Iteration: {}'.format(iteration))
+
+            train_fin_time = time.time()
 
             evaluate_train_statistics = evaluator.evaluate(evaluate_train_loader)
             validate_statistics = evaluator.evaluate(validate_loader)
@@ -198,6 +200,15 @@ def train(args):
             statistics_container.append(iteration, validate_statistics, data_type='validation')
             statistics_container.append(iteration, test_statistics, data_type='test')
             statistics_container.dump()
+
+            train_time = train_fin_time - train_bgn_time
+            validate_time = time.time() - train_fin_time
+
+            logging.info(
+                'Train time: {:.3f} s, validate time: {:.3f} s'
+                ''.format(train_time, validate_time))
+
+            train_bgn_time = time.time()
         
         # Save model
         if iteration % 10000 == 0:
@@ -260,6 +271,7 @@ def evaluate(args):
     augmentation = args.augmentation
     batch_size = args.batch_size
     iteration = args.iteration
+    split = args.split
     device = torch.device('cuda') if args.cuda and torch.cuda.is_available() else torch.device('cpu')
     mini_data = args.mini_data
     filename = args.filename
@@ -304,10 +316,10 @@ def evaluate(args):
     evaluator = Evaluator(model, feature_hdf5s_dir, segment_seconds, 
         frames_per_second, batch_size)
 
-    statistics = evaluator.evaluate('validation')
+    statistics = evaluator.evaluate(split)
  
     for key in statistics.keys():
-        print('{}: {:.3f}'.format(key, np.mean(statistics[key])))
+        logging.info('{}: {:.3f}'.format(key, np.mean(statistics[key])))
 
 
 def inference(args):
@@ -407,6 +419,7 @@ if __name__ == '__main__':
     parser_evalute.add_argument('--augmentation', type=str, required=True)
     parser_evalute.add_argument('--batch_size', type=int, required=True)
     parser_evalute.add_argument('--iteration', type=int, required=True)
+    parser_evalute.add_argument('--split', type=str, required=True, choices=['train', 'validation', 'test'])
     parser_evalute.add_argument('--cuda', action='store_true', default=False)
     parser_evalute.add_argument('--mini_data', action='store_true', default=False)
 

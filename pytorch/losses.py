@@ -14,7 +14,7 @@ def bce(output, target, mask):
 
 def onset_frame_bce(model, output_dict, target_dict):
     return bce(output_dict['frame_output'], target_dict['frame_roll'], target_dict['mask_roll']) + \
-        bce(output_dict['frame_output'], target_dict['frame_roll'], target_dict['mask_roll'])
+        bce(output_dict['onset_output'], target_dict['onset_roll'], target_dict['mask_roll'])
 
 
 def get_loss_func(loss_type):
