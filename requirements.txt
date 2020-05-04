@@ -1,0 +1,6 @@
+torch==1.0.1.post2
+librosa==0.6.3
+mido==1.2.9
+mir_eval==0.5
+matplotlib==3.0.3
+torchlibrosa
