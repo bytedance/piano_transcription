@@ -16,7 +16,7 @@ CHECKPOINT_PATH='/mnt/cephfs_new_wj/speechsv/kongqiuqiang/released_models/pub_pi
 python3 pytorch/inference.py --model_type=$MODEL_TYPE --checkpoint_path=$CHECKPOINT_PATH --audio_path='examples/cut_liszt.wav' --checkpoint_path=$CHECKPOINT_PATH --cuda 
 ```
 
-Demo: https://www.youtube.com/watch?v=easks37Q4iE
+Demo: https://www.youtube.com/watch?v=5U-WL0QvKCg
 
 ## Training a piano transcription system from scratch
 
