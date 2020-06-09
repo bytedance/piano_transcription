@@ -20,7 +20,7 @@ import torch.utils.data
 from utilities import (create_folder, get_filename, create_logging, 
     StatisticsContainer, RegressionPostProcessor) 
 from data_generator import MaestroDataset, Sampler, TestSampler, collate_fn
-from models import Regress_onset_offset_frame_velocity_CRNN
+from models import Regress_onset_offset_frame_velocity_CRNN, Regress_pedal_CRNN
 from pytorch_utils import move_data_to_device
 from losses import get_loss_func
 from evaluate import SegmentEvaluator
@@ -189,7 +189,6 @@ def train(args):
         
         # Evaluation 
         if iteration % 5000 == 0:# and iteration > 0:
-        # if iteration % 1000 == 0:# and iteration > 0:
             logging.info('------------------------------------')
             logging.info('Iteration: {}'.format(iteration))
 
