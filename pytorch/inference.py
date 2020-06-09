@@ -14,7 +14,7 @@ import torch
  
 from utilities import (create_folder, get_filename, RegressionPostProcessor, 
     write_events_to_midi)
-from models import Regress_onset_offset_frame_velocity_CRNN
+from models import *
 from pytorch_utils import move_data_to_device, forward
 import config
 
@@ -42,6 +42,7 @@ class PianoTranscription(object):
         self.onset_threshold = 0.3
         self.offset_threshod = 0.3
         self.frame_threshold = 0.1
+        self.pedal_offset_threshold = 0.2
 
         # Build model
         Model = eval(model_type)
@@ -80,7 +81,7 @@ class PianoTranscription(object):
         audio = np.concatenate((audio, np.zeros((1, pad_len))), axis=1)
 
         # Move data to GPU
-        audio = move_data_to_device(audio, self.device)
+        # audio = move_data_to_device(audio, self.device)
 
         # Enframe to segments
         segments = self.enframe(audio, self.segment_samples)
@@ -103,19 +104,25 @@ class PianoTranscription(object):
         post_processor = RegressionPostProcessor(self.frames_per_second, 
             classes_num=self.classes_num, onset_threshold=self.onset_threshold, 
             offset_threshold=self.offset_threshod, 
-            frame_threshold=self.frame_threshold)
+            frame_threshold=self.frame_threshold, 
+            pedal_offset_threshold=self.pedal_offset_threshold)
 
         # Post process output_dict to MIDI events
-        est_note_events = post_processor.output_dict_to_midi_events(output_dict)
+        (est_note_events, est_pedal_events) = \
+            post_processor.output_dict_to_midi_events(output_dict)
 
         # Write MIDI events to file
         if midi_path:
-            write_events_to_midi(start_time=0, note_events=est_note_events, midi_path=midi_path)
+            write_events_to_midi(start_time=0, note_events=est_note_events, 
+                pedal_events=est_pedal_events, midi_path=midi_path)
             print('Write out to {}'.format(midi_path))
 
-        transcribed_dict = {'output_dict': output_dict, 'est_note_events': est_note_events}
-        return transcribed_dict
+        transcribed_dict = {
+            'output_dict': output_dict, 
+            'est_note_events': est_note_events,
+            'est_pedal_events': est_pedal_events}
 
+        return transcribed_dict
 
     def enframe(self, x, segment_samples):
         """Enframe long sequence to short segments.
@@ -135,7 +142,7 @@ class PianoTranscription(object):
             batch.append(x[:, pointer : pointer + segment_samples])
             pointer += segment_samples // 2
 
-        batch = torch.cat(batch, dim=0)
+        batch = np.concatenate(batch, axis=0)
         return batch
 
     def deframe(self, x):
@@ -202,6 +209,29 @@ def inference(args):
     transcribed_dict = transcriptor.transcribe(audio, midi_path)
     print('Transcribe time: {:.3f} s'.format(time.time() - transcribe_time))
 
+    plot = False
+    if plot:
+        output_dict = transcribed_dict['output_dict']
+        fig, axs = plt.subplots(5, 1, figsize=(15, 8), sharex=True)
+        mel = librosa.feature.melspectrogram(audio, sr=16000, n_fft=2048, hop_length=160, n_mels=229, fmin=30, fmax=8000)
+        axs[0].matshow(np.log(mel), origin='lower', aspect='auto', cmap='jet')
+        axs[1].matshow(output_dict['frame_output'].T, origin='lower', aspect='auto', cmap='jet')
+        axs[2].matshow(output_dict['reg_onset_output'].T, origin='lower', aspect='auto', cmap='jet')
+        axs[3].matshow(output_dict['reg_offset_output'].T, origin='lower', aspect='auto', cmap='jet')
+        axs[4].plot(output_dict['pedal_frame_output'])
+        axs[0].set_xlim(0, len(output_dict['frame_output']))
+        axs[4].set_xlabel('Frames')
+        axs[0].set_title('Log mel spectrogram')
+        axs[1].set_title('frame_output')
+        axs[2].set_title('reg_onset_output')
+        axs[3].set_title('reg_offset_output')
+        axs[4].set_title('pedal_frame_output')
+        plt.tight_layout(0, .05, 0)
+        fig_path = 'results/{}.pdf'.format(get_filename(audio_path))
+        plt.savefig(fig_path)
+        print('Plot to {}'.format(fig_path))
+
+    
 
 if __name__ == '__main__':
 
