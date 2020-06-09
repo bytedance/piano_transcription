@@ -11,9 +11,9 @@ This allows users to transcribe an audio recording using a pretrained model. Fir
 Then, execute the following command to inference an audio recording in wav format.
 
 ```
-MODEL_TYPE="Regress_onset_offset_frame_velocity_CRNN"
-CHECKPOINT_PATH='/mnt/cephfs_new_wj/speechsv/kongqiuqiang/released_models/pub_piano_transcription/v2.0/Regress_onset_offset_frame_velocity_CRNN_onset_F1=0.9677.pth'
-python3 pytorch/inference.py --model_type=$MODEL_TYPE --checkpoint_path=$CHECKPOINT_PATH --audio_path='examples/cut_liszt.wav' --checkpoint_path=$CHECKPOINT_PATH --cuda 
+MODEL_TYPE="Note_pedal"
+CHECKPOINT_PATH='/mnt/cephfs_new_wj/speechsv/kongqiuqiang/released_models/pub_piano_transcription/v3.0/note_F1=0.9677_pedal_F1=0.8658.pth'
+python3 pytorch/inference.py --model_type=$MODEL_TYPE --checkpoint_path=$CHECKPOINT_PATH --audio_path='examples/cut_liszt.wav' --checkpoint_path=$CHECKPOINT_PATH --cuda
 ```
 
 Demo: https://www.youtube.com/watch?v=5U-WL0QvKCg
@@ -75,12 +75,6 @@ To train the systems, modify and execute commands in runme.sh, including:
 4) Evaluate.
 5) Inference using the trained model.
 
-## Visualization of input and target
-
-The following figure shows the input and target for training:
-
-<img src="appendixes/target.png">
-
 ## Results
 The training uses a single Tesla-V100-PCIE-32GB card. The system is trained for 300k iterations for one week. The training looks like:
 
@@ -125,6 +119,5 @@ Model saved to /mnt/cephfs_new_wj/speechsv/kongqiuqiang/workspaces/pub_piano_tra
 <img src="appendixes/cut_liszt.png">
 
 
-
-## Reference
+## Cite
 [1] Qiuqiang Kong, et al., High resolution piano transcription by regressing onset and offset time stamps, [To appear] 2020
