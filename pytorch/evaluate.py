@@ -14,9 +14,12 @@ from pytorch_utils import forward_dataloader
 
 
 def mae(target, output, mask):
-    target *= mask
-    output *= mask
-    return np.sum(np.abs(target - output)) / np.clip(np.sum(mask), 1e-8, np.inf)
+    if mask is None:
+        return np.mean(np.abs(target - output))
+    else:
+        target *= mask
+        output *= mask
+        return np.sum(np.abs(target - output)) / np.clip(np.sum(mask), 1e-8, np.inf)
 
 
 class SegmentEvaluator(object):
@@ -64,26 +67,39 @@ class SegmentEvaluator(object):
                 output_dict['offset_output'].flatten(), average='macro')
 
         if 'reg_onset_output' in output_dict.keys():
-            """Only evaluate where either prediction or ground truth exists"""
+            """Mask indictes only evaluate where either prediction or ground truth exists"""
             mask = (np.sign(output_dict['reg_onset_output'] + output_dict['reg_onset_roll'] - 0.01) + 1) / 2
             statistics['reg_onset_mae'] = mae(output_dict['reg_onset_output'], 
                 output_dict['reg_onset_roll'], mask)
 
         if 'reg_offset_output' in output_dict.keys():
-            """Only evaluate where either prediction or ground truth exists"""
+            """Mask indictes only evaluate where either prediction or ground truth exists"""
             mask = (np.sign(output_dict['reg_offset_output'] + output_dict['reg_offset_roll'] - 0.01) + 1) / 2
             statistics['reg_offset_mae'] = mae(output_dict['reg_offset_output'], 
                 output_dict['reg_offset_roll'], mask)
 
         if 'velocity_output' in output_dict.keys():
-            """Only evaluate where onset exists"""
+            """Mask indictes only evaluate where onset exists"""
             statistics['velocity_mae'] = mae(output_dict['velocity_output'], 
                 output_dict['velocity_roll'] / 128, output_dict['onset_roll'])
 
-        if 'pedal_output' in output_dict.keys():
-            statistics['pedal_ap'] = metrics.average_precision_score(
-                output_dict['pedal_roll'].flatten(), 
-                output_dict['pedal_output'].flatten(), average='macro')
+        if 'reg_pedal_onset_output' in output_dict.keys():
+            statistics['reg_pedal_onset_mae'] = mae(
+                output_dict['reg_pedal_onset_roll'].flatten(), 
+                output_dict['reg_pedal_onset_output'].flatten(), 
+                mask=None)
+
+        if 'reg_pedal_offset_roll' in output_dict.keys():
+            statistics['reg_pedal_offset_mae'] = mae(
+                output_dict['reg_pedal_offset_output'].flatten(), 
+                output_dict['reg_pedal_offset_roll'].flatten(), 
+                mask=None)
+
+        if 'pedal_frame_roll' in output_dict.keys():
+            statistics['pedal_frame_mae'] = mae(
+                output_dict['pedal_frame_output'].flatten(), 
+                output_dict['pedal_frame_roll'].flatten(), 
+                mask=None)
 
         for key in statistics.keys():
             statistics[key] = np.around(statistics[key], decimals=4)
