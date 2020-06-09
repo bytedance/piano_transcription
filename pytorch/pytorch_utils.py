@@ -65,7 +65,8 @@ def forward_dataloader(model, dataloader, batch_size, return_target=True):
 
         if return_target:
             for target_type in batch_data_dict.keys():
-                if 'roll' in target_type or 'reg_distance' in target_type or 'reg_tail' in target_type:
+                if 'roll' in target_type or 'reg_distance' in target_type or \
+                    'reg_tail' in target_type:
                     append_to_dict(output_dict, target_type, 
                         batch_data_dict[target_type])
 
