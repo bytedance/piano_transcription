@@ -3,10 +3,10 @@ import numpy as np
 
 def note_detection_with_onset_offset_regress(frame_output, onset_output, 
     onset_shift_output, offset_output, offset_shift_output, velocity_output,
-    frame_threshold, 
-    ):
+    frame_threshold):
     """Estimate onset and offset, onset shift, offset shift and velocity of 
-    piano notes. 
+    piano notes. First detect onsets with onset outputs, then detect offsets
+    with frame and offset outputs.
     
     Args:
       frame_output: (frames_num,)
@@ -65,6 +65,62 @@ def note_detection_with_onset_offset_regress(frame_output, onset_output,
                 fin = i
                 output_tuples.append([bgn, fin, onset_shift_output[bgn], 
                     offset_shift_output[fin], velocity_output[bgn]])
+                bgn, frame_disappear, offset_occur = None, None, None
+
+    # Sort pairs by onsets
+    output_tuples.sort(key=lambda pair: pair[0])
+
+    return output_tuples
+
+
+def pedal_detection_with_onset_offset_regress(frame_output, offset_output, 
+    offset_shift_output, frame_threshold):
+    """Estimate onset and offset, onset shift and offset shift of pedals.
+    
+    Args:
+      frame_output: (frames_num,)
+      offset_output: (frames_num,)
+      offset_shift_output: (frames_num,)
+      frame_threshold: float
+
+    Returns: 
+      output_tuples: list of [bgn, fin, onset_shift, offset_shift], 
+      e.g., [
+        [1821, 1909, 0.4749851, 0.3048533], 
+        [1909, 1947, 0.30730522, -0.45764327], 
+        ...]
+    """
+    output_tuples = []
+    bgn = None
+    frame_disappear = None
+    offset_occur = None
+
+    for i in range(1, frame_output.shape[0]):
+        if frame_output[i] >= frame_threshold and frame_output[i] > frame_output[i - 1]:
+            if bgn:
+                pass
+            else:
+                bgn = i
+
+        if bgn and i > bgn:
+            """If onset found, then search offset"""
+            if frame_output[i] <= frame_threshold and not frame_disappear:
+                """Frame disappear detected"""
+                frame_disappear = i
+
+            if offset_output[i] == 1 and not offset_occur:
+                """Offset detected"""
+                offset_occur = i
+
+            if offset_occur:
+                fin = offset_occur
+                output_tuples.append([bgn, fin, 0., offset_shift_output[fin]])
+                bgn, frame_disappear, offset_occur = None, None, None
+
+            if frame_disappear and i - frame_disappear >= 10:
+                """offset not detected but frame disappear"""
+                fin = frame_disappear
+                output_tuples.append([bgn, fin, 0., offset_shift_output[fin]])
                 bgn, frame_disappear, offset_occur = None, None, None
 
     # Sort pairs by onsets
