@@ -24,9 +24,22 @@ def regress_onset_offset_frame_velocity_bce(model, output_dict, target_dict):
     return total_loss
 
 
+def regress_pedal_bce(model, output_dict, target_dict):
+    """Pedal regression loss, containing pedal onset, pedal offset and pedal frames.
+    """
+    onset_pedal_loss = F.binary_cross_entropy(output_dict['reg_pedal_onset_output'], target_dict['reg_pedal_onset_roll'][:, :, None])
+    offset_pedal_loss = F.binary_cross_entropy(output_dict['reg_pedal_offset_output'], target_dict['reg_pedal_offset_roll'][:, :, None])
+    frame_pedal_loss = F.binary_cross_entropy(output_dict['pedal_frame_output'], target_dict['pedal_frame_roll'][:, :, None])
+    total_loss = onset_pedal_loss + offset_pedal_loss + frame_pedal_loss
+    return total_loss
+
+
 def get_loss_func(loss_type):
     if loss_type == 'regress_onset_offset_frame_velocity_bce':
         return regress_onset_offset_frame_velocity_bce
+
+    elif loss_type == 'regress_pedal_bce':
+        return regress_pedal_bce
 
     else:
         raise Exception('Incorrect loss_type!')
