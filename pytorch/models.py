@@ -249,3 +249,103 @@ class Regress_onset_offset_frame_velocity_CRNN(nn.Module):
             'velocity_output': velocity_output}
 
         return output_dict
+
+
+####################################
+class Regress_pedal_CRNN(nn.Module):
+    def __init__(self, frames_per_second, classes_num):
+        super(Regress_pedal_CRNN, self).__init__()
+
+        sample_rate = 16000
+        window_size = 2048
+        hop_size = sample_rate // frames_per_second
+        mel_bins = 229
+        fmin = 30
+        fmax = sample_rate // 2
+
+        window = 'hann'
+        center = True
+        pad_mode = 'reflect'
+        ref = 1.0
+        amin = 1e-10
+        top_db = None
+
+        midfeat = 1792
+        momentum = 0.01
+
+        # Spectrogram extractor
+        self.spectrogram_extractor = Spectrogram(n_fft=window_size, 
+            hop_length=hop_size, win_length=window_size, window=window, 
+            center=center, pad_mode=pad_mode, freeze_parameters=True)
+
+        # Logmel feature extractor
+        self.logmel_extractor = LogmelFilterBank(sr=sample_rate, 
+            n_fft=window_size, n_mels=mel_bins, fmin=fmin, fmax=fmax, ref=ref, 
+            amin=amin, top_db=top_db, freeze_parameters=True)
+
+        self.bn0 = nn.BatchNorm2d(mel_bins, momentum)
+
+        self.reg_pedal_onset_model = AcousticModelCRnn8Dropout(1, midfeat, momentum)
+        self.reg_pedal_offset_model = AcousticModelCRnn8Dropout(1, midfeat, momentum)
+        self.reg_pedal_frame_model = AcousticModelCRnn8Dropout(1, midfeat, momentum)
+        
+        self.init_weight()
+
+    def init_weight(self):
+        init_bn(self.bn0)
+        
+    def forward(self, input):
+        """
+        Args:
+          input: (batch_size, data_length)
+
+        Outputs:
+          output_dict: dict, {
+            'reg_onset_output': (batch_size, time_steps, classes_num),
+            'reg_offset_output': (batch_size, time_steps, classes_num),
+            'frame_output': (batch_size, time_steps, classes_num),
+            'velocity_output': (batch_size, time_steps, classes_num)
+          }
+        """
+        x = self.spectrogram_extractor(input)   # (batch_size, 1, time_steps, freq_bins)
+        x = self.logmel_extractor(x)    # (batch_size, 1, time_steps, mel_bins)
+
+        x = x.transpose(1, 3)
+        x = self.bn0(x)
+        x = x.transpose(1, 3)
+
+        reg_pedal_onset_output = self.reg_pedal_onset_model(x)  # (batch_size, time_steps, classes_num)
+        reg_pedal_offset_output = self.reg_pedal_offset_model(x)  # (batch_size, time_steps, classes_num)
+        pedal_frame_output = self.reg_pedal_frame_model(x)  # (batch_size, time_steps, classes_num)
+        
+        output_dict = {
+            'reg_pedal_onset_output': reg_pedal_onset_output, 
+            'reg_pedal_offset_output': reg_pedal_offset_output,
+            'pedal_frame_output': pedal_frame_output}
+
+        return output_dict
+
+
+####################################
+# This model is not trained, but combined from the pretrained note and pedal models.
+class Note_pedal(nn.Module):
+    def __init__(self, frames_per_second, classes_num):
+        """Combination of note and pedal model.
+        """
+        super(Note_pedal, self).__init__()
+
+        self.note_model = Regress_onset_offset_frame_velocity_CRNN(frames_per_second, classes_num)
+        self.pedal_model = Regress_pedal_CRNN(frames_per_second, classes_num)
+
+    def load_state_dict(self, m, strict=False):
+        self.note_model.load_state_dict(m['note_model'], strict=strict)
+        self.pedal_model.load_state_dict(m['pedal_model'], strict=strict)
+
+    def forward(self, input):
+        note_output_dict = self.note_model(input)
+        pedal_output_dict = self.pedal_model(input)
+
+        full_output_dict = {}
+        full_output_dict.update(note_output_dict)
+        full_output_dict.update(pedal_output_dict)
+        return full_output_dict
