@@ -3,7 +3,7 @@
 
 Piano transcription is the task to transcribe piano recordings to MIDI. That is, transcribe waveform to symbolic music notes. This codebase contains PyTorch implementation of 1. Inference a piano audio recording to MIDI using pretrained model; 2. Training a piano transcription system. 
 
-This codebase is the implementation of [1]: "High resolution piano transcription by regressing onset and offset time stamps". First, audio recordings are split into 10-second audio segments. Then log mel spectrogram is used as feature. The targets for training includes onset regression, offset regression, framewise classification and velocity regression. CNN + BiGRU is used to build the piano transcription system. 
+This codebase is the implementation of [1]: "High resolution piano transcription by regressing onset and offset time stamps". Both of piano notes and piano pedals are transcribed. First, audio recordings are split into 10-second audio segments. Then log mel spectrogram is used as feature. The targets for training includes onset regression, offset regression, framewise classification and velocity regression. CNN + BiGRU is used to build the piano transcription system. We have used this piano transcription system to build a GiantMIDI-Piano dataset [2]. See demos here: https://www.youtube.com/watch?v=5U-WL0QvKCg
 
 ## Inference using pretrained model
 This allows users to transcribe an audio recording using a pretrained model. First, install dependencies in requirements.txt
@@ -121,3 +121,5 @@ Model saved to /mnt/cephfs_new_wj/speechsv/kongqiuqiang/workspaces/pub_piano_tra
 
 ## Cite
 [1] Qiuqiang Kong, et al., High resolution piano transcription by regressing onset and offset time stamps, [To appear] 2020
+
+[2] Qiuqiang Kong, et al., GiantMIDI-Piano A MIDI dataset for classical piano music compositions, [To appear] 2020
