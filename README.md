@@ -6,7 +6,7 @@ Piano transcription is the task to transcribe piano recordings to MIDI. That is,
 This codebase is the implementation of [1]: "High resolution piano transcription by regressing onset and offset time stamps". Both of piano notes and piano pedals are transcribed. First, audio recordings are split into 10-second audio segments. Then log mel spectrogram is used as feature. The targets for training includes onset regression, offset regression, framewise classification and velocity regression. CNN + BiGRU is used to build the piano transcription system. We have used this piano transcription system to build a GiantMIDI-Piano dataset [2]. See demos here: https://www.youtube.com/watch?v=5U-WL0QvKCg
 
 ## Transcribe using pretrained model
-Transcribe a piano recording is easy!. First, install dependencies in requirements.txt
+Transcribe a piano recording is easy! First, install dependencies in requirements.txt
 
 Then, execute the following command to transcribe an audio recording into an MIDI file.
 
