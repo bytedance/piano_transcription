@@ -55,10 +55,10 @@ class PianoTranscription(object):
 
         # Parallel
         print('GPU number: {}'.format(torch.cuda.device_count()))
-        self.model = torch.nn.DataParallel(self.model)
 
-        if 'cuda' in str(self.device):
-            self.model.to(self.device)
+        if 'cuda' in str(device):
+            self.model = torch.nn.DataParallel(self.model)
+            self.model.to(device)
 
     def transcribe(self, audio, midi_path):
         """Transcribe an audio recording.
