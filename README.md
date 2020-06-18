@@ -106,13 +106,13 @@ Model saved to .../workspaces/piano_transcription/checkpoints/main/Regress_onset
 
 ## Visualization of piano transcription
 
-**Demo 1.** Andras Schiff: J.S.Bach - French Suites [[wav]](resources/cut_bach.mp3) [[transcribed_midi]](resources/cut_bach.mid)
+**Demo 1.** Andras Schiff: J.S.Bach - French Suites [[audio]](resources/cut_bach.mp3) [[transcribed_midi]](resources/cut_bach.mid)
 
-<img src="appendixes/cut_bach.png">
+<img src="resources/cut_bach.png">
 
-**Demo 2.** Lang Lang: Franz Liszt - Love Dream (Liebestraum) [[wav]](resources/cut_liszt.mp3) [[transcribed_midi]](resources/cut_liszt.mid)
+**Demo 2.** Lang Lang: Franz Liszt - Love Dream (Liebestraum) [[audio]](resources/cut_liszt.mp3) [[transcribed_midi]](resources/cut_liszt.mid)
 
-<img src="appendixes/cut_liszt.png">
+<img src="resources/cut_liszt.png">
 
 
 ## Contact
