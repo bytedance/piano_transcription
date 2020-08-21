@@ -6,16 +6,18 @@ import csv
 import time
 import collections
 import librosa
+import sox
 import logging
 
 from utilities import (create_folder, int16_to_float32, traverse_folder, 
-    TargetProcessor, write_events_to_midi, plot_waveform_midi_targets)
+    pad_truncate_sequence, TargetProcessor, write_events_to_midi, 
+    plot_waveform_midi_targets)
 import config
 
 
 class MaestroDataset(object):
     def __init__(self, hdf5s_dir, segment_seconds, frames_per_second, 
-        max_note_shift=0):
+        max_note_shift=0, augmentor=None):
         """Maestro dataset. Will be used for DataLoader.
 
         Args:
@@ -32,6 +34,7 @@ class MaestroDataset(object):
         self.begin_note = config.begin_note
         self.classes_num = config.classes_num
         self.segment_samples = int(self.sample_rate * self.segment_seconds)
+        self.augmentor = augmentor
 
         self.random_state = np.random.RandomState(1234)
 
@@ -79,6 +82,9 @@ class MaestroDataset(object):
 
             waveform = int16_to_float32(hf['waveform'][start_sample : end_sample])
 
+            if self.augmentor:
+                waveform = self.augmentor.augment(waveform)
+
             if note_shift != 0:
                 """Augment pitch"""
                 waveform = librosa.effects.pitch_shift(waveform, self.sample_rate, 
@@ -104,6 +110,39 @@ class MaestroDataset(object):
             exit()
 
         return data_dict
+
+
+class Augmentor(object):
+    def __init__(self):
+        self.sample_rate = config.sample_rate
+        self.random_state = np.random.RandomState(1234)
+
+    def augment(self, x):
+        clip_samples = len(x)
+
+        tfm = sox.Transformer()
+        tfm.set_globals(verbosity=0)
+
+        tfm.pitch(self.random_state.uniform(-0.1, 0.1, 1)[0])
+        tfm.contrast(self.random_state.uniform(0, 100, 1)[0])
+
+        tfm.equalizer(frequency=self.loguniform(32, 4096, 1)[0], 
+            width_q=self.random_state.uniform(1, 2, 1)[0], 
+            gain_db=self.random_state.uniform(-30, 10, 1)[0])
+
+        tfm.equalizer(frequency=self.loguniform(32, 4096, 1)[0], 
+            width_q=self.random_state.uniform(1, 2, 1)[0], 
+            gain_db=self.random_state.uniform(-30, 10, 1)[0])
+        
+        tfm.reverb(reverberance=self.random_state.uniform(0, 70, 1)[0])
+
+        aug_x = tfm.build_array(input_array=x, sample_rate_in=self.sample_rate)
+        aug_x = pad_truncate_sequence(aug_x, clip_samples)
+        
+        return aug_x
+
+    def loguniform(self, low, high, size):
+        return np.exp(self.random_state.uniform(np.log(low), np.log(high), size))
 
 
 class Sampler(object):

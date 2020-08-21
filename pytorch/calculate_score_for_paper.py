@@ -2,7 +2,6 @@ import os
 import sys
 sys.path.insert(1, os.path.join(sys.path[0], '../utils'))
 sys.path.insert(1, os.path.join(sys.path[0], '../../autoth'))
-from autoth.core import HyperParamsOptimizer
 import numpy as np
 import argparse
 import librosa
@@ -32,7 +31,7 @@ def infer_prob(args):
     workspace = args.workspace
     model_type = args.model_type
     checkpoint_path = args.checkpoint_path
-    probs_dir = args.probs_dir
+    dataset = args.dataset
     split = args.split
     device = torch.device('cuda') if args.cuda and torch.cuda.is_available() else torch.device('cpu')
     
@@ -42,11 +41,11 @@ def infer_prob(args):
     frames_per_second = config.frames_per_second
     classes_num = config.classes_num
     begin_note = config.begin_note
-    dataset = 'maestro'
 
     # Paths
     hdf5s_dir = os.path.join(workspace, 'hdf5s', dataset)
-
+    probs_dir = os.path.join(workspace, 'probs', 'model_type={}'.format(model_type), 
+        'dataset={}'.format(dataset), 'split={}'.format(split))
     create_folder(probs_dir)
 
     # Transcriptor
@@ -122,6 +121,8 @@ class RegressionScoreCalculator(object):
         self.offset_ratio = None
         self.offset_min_tolerance = 0.05
         self.pedal_offset_threshold = 0.2
+
+        self.pedal_offset_min_tolerance = 0.5
         
         (hdf5_names, self.hdf5_paths) = traverse_folder(hdf5s_dir)
 
@@ -149,11 +150,11 @@ class RegressionScoreCalculator(object):
                     list_args.append([n, hdf5_path, params])
                     """e.g., [0, 'xx.h5', [0.3, 0.3, 0.3]]"""
            
-        debug = False
+        debug = False 
         if debug:
             list_args = list_args[0 :] 
             for i in range(len(list_args)):
-                print(i)
+                print(i, list_args[i][1])
                 self.calculate_score_per_song(list_args[i])
             import crash
             asdf
@@ -276,7 +277,9 @@ class RegressionScoreCalculator(object):
                         ref_pitches=np.ones(ref_pedal_on_off_pairs.shape[0]), 
                         est_intervals=est_pedal_on_offs, 
                         est_pitches=np.ones(est_pedal_on_offs.shape[0]), 
-                        onset_tolerance=0.2)
+                        onset_tolerance=0.2, 
+                        offset_ratio=None,
+                        offset_min_tolerance=self.pedal_offset_min_tolerance)
 
                 return_dict['pedal_f1'] = pedal_f1
 
@@ -305,12 +308,14 @@ def calculate_metrics(args, thresholds=None):
 
     # Arugments & parameters
     workspace = args.workspace
-    probs_dir = args.probs_dir
+    model_type = args.model_type
+    dataset = args.dataset
     split = args.split
-    dataset = 'maestro'
     
     # Paths
     hdf5s_dir = os.path.join(workspace, 'hdf5s', dataset)
+    probs_dir = os.path.join(workspace, 'probs', 'model_type={}'.format(model_type), 
+        'dataset={}'.format(dataset), 'split={}'.format(split))
 
     # Score calculator
     score_calculator = RegressionScoreCalculator(hdf5s_dir, probs_dir, split=split)
@@ -336,13 +341,14 @@ if __name__ == '__main__':
     parser_infer_prob.add_argument('--workspace', type=str, required=True)
     parser_infer_prob.add_argument('--model_type', type=str, required=True)
     parser_infer_prob.add_argument('--checkpoint_path', type=str, required=True)
-    parser_infer_prob.add_argument('--probs_dir', type=str, required=True)
+    parser_infer_prob.add_argument('--dataset', type=str, required=True, choices=['maestro', 'maps'])
     parser_infer_prob.add_argument('--split', type=str, required=True)
     parser_infer_prob.add_argument('--cuda', action='store_true', default=False)
 
     parser_metrics = subparsers.add_parser('calculate_metrics')
     parser_metrics.add_argument('--workspace', type=str, required=True)
-    parser_metrics.add_argument('--probs_dir', type=str, required=True)
+    parser_metrics.add_argument('--model_type', type=str, required=True)
+    parser_metrics.add_argument('--dataset', type=str, required=True, choices=['maestro', 'maps'])
     parser_metrics.add_argument('--split', type=str, required=True)
 
     args = parser.parse_args()

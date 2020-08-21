@@ -79,7 +79,7 @@ def pack_maestro_dataset_to_hdf5(args):
 
 
 def pack_maps_dataset_to_hdf5(args):
-    """MAPS is a piano dataset only used for validating our piano transcription
+    """MAPS is a piano dataset only used for evaluating our piano transcription
     system (optional). Ref:
 
     [1] Emiya, Valentin. "MAPS Database A piano database for multipitch 
@@ -100,7 +100,7 @@ def pack_maps_dataset_to_hdf5(args):
     pianos = ['ENSTDkCl', 'ENSTDkAm']
 
     # Paths
-    waveform_hdf5s_dir = os.path.join(workspace, 'features_maps')
+    waveform_hdf5s_dir = os.path.join(workspace, 'hdf5s', 'maps')
 
     logs_dir = os.path.join(workspace, 'logs', get_filename(__file__))
     create_logging(logs_dir, filemode='w')
