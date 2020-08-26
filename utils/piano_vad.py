@@ -33,9 +33,9 @@ def note_detection_with_onset_offset_regress(frame_output, onset_output,
         if onset_output[i] == 1:
             if bgn:
                 """Consecutive onsets"""
-                fin = i
+                fin = max(i - 1, 0)
                 output_tuples.append([bgn, fin, onset_shift_output[bgn], 
-                    offset_shift_output[fin], velocity_output[bgn]])
+                    0, velocity_output[bgn]])
                 frame_disappear, offset_occur = None, None
             bgn = i
 

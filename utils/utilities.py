@@ -595,8 +595,8 @@ def write_events_to_midi(start_time, note_events, pedal_events, midi_path):
 
     if pedal_events:
         for pedal_event in pedal_events:
-            message_roll.append({'time': pedal_event['pedal_on'], 'control_change': 64, 'value': 127})
-            message_roll.append({'time': pedal_event['pedal_off'], 'control_change': 64, 'value': 0})
+            message_roll.append({'time': pedal_event['onset_time'], 'control_change': 64, 'value': 127})
+            message_roll.append({'time': pedal_event['offset_time'], 'control_change': 64, 'value': 0})
 
     # Sort MIDI messages by time
     message_roll.sort(key=lambda note_event: note_event['time'])
@@ -960,15 +960,15 @@ class RegressionPostProcessor(object):
 
         Returns:
           pedal_events: list of dict, e.g.,
-            [{'pedal_on': 0.1800, 'pedal_off': 0.9669}, 
-             {'pedal_on': 1.1400, 'pedal_off': 2.6458},
+            [{'onset_time': 0.1800, 'offset_time': 0.9669}, 
+             {'onset_time': 1.1400, 'offset_time': 2.6458},
              ...]
         """
         pedal_events = []
         for i in range(len(pedal_on_offs)):
             pedal_events.append({
-                'pedal_on': pedal_on_offs[i, 0], 
-                'pedal_off': pedal_on_offs[i, 1]})
+                'onset_time': pedal_on_offs[i, 0], 
+                'offset_time': pedal_on_offs[i, 1]})
         
         return pedal_events
 
