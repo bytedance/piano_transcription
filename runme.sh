@@ -40,9 +40,8 @@ python3 pytorch/combine_note_and_pedal_models.py --note_checkpoint_path=$NOTE_CH
 
 # Inference probability for evaluation
 # PROBS_DIR=$WORKSPACE"/probs/Note_pedal"
-# python3 pytorch/calculate_score_for_paper.py infer_prob --workspace=$WORKSPACE --model_type='Note_pedal' --checkpoint_path=$NOTE_PEDAL_CHECKPOINT_PATH --probs_dir=$PROBS_DIR --split='test' --cuda
-python3 pytorch/calculate_score_for_paper.py infer_prob --workspace=$WORKSPACE --model_type='Note_pedal' --checkpoint_path=$NOTE_PEDAL_CHECKPOINT_PATH --dataset='maestro' --split='test' --cuda
+python3 pytorch/calculate_score_for_paper.py infer_prob --workspace=$WORKSPACE --model_type='Note_pedal' --checkpoint_path=$NOTE_PEDAL_CHECKPOINT_PATH --augmentation='none' --dataset='maestro' --split='test' --cuda
 
 # Calculate metrics
-python3 pytorch/calculate_score_for_paper.py calculate_metrics --workspace=$WORKSPACE --model_type='Note_pedal' --dataset='maestro' --split='test'
-python3 pytorch/calculate_score_for_paper.py calculate_metrics --workspace=$WORKSPACE --model_type='Note_pedal' --dataset='maps' --split='test'
+python3 pytorch/calculate_score_for_paper.py calculate_metrics --workspace=$WORKSPACE --model_type='Note_pedal' --augmentation='aug' --dataset='maestro' --split='test'
+python3 pytorch/calculate_score_for_paper.py calculate_metrics --workspace=$WORKSPACE --model_type='Note_pedal' --augmentation='aug' --dataset='maps' --split='test'
