@@ -119,7 +119,7 @@ class RegressionScoreCalculator(object):
 
         self.evaluate_frame = True
         self.onset_tolerance = 0.05
-        self.offset_ratio = None
+        self.offset_ratio = 0.2
         self.offset_min_tolerance = 0.05
 
         self.pedal_offset_threshold = 0.2
@@ -152,12 +152,13 @@ class RegressionScoreCalculator(object):
                     list_args.append([n, hdf5_path, params])
                     """e.g., [0, 'xx.h5', [0.3, 0.3, 0.3]]"""
            
-        debug = False
+        debug = True
         if debug:
             list_args = list_args[0 :] 
             for i in range(len(list_args)):
                 print(i, list_args[i][1])
-                self.calculate_score_per_song(list_args[i])
+                if 'MAPS_MUS-chpn-p4_ENSTDkAm' in list_args[i][1]:
+                    self.calculate_score_per_song(list_args[i])
             import crash
             asdf
 
@@ -258,6 +259,12 @@ class RegressionScoreCalculator(object):
                     onset_tolerance=self.onset_tolerance, 
                     offset_ratio=self.offset_ratio, 
                     offset_min_tolerance=self.offset_min_tolerance)
+
+            import crash
+            asdf
+            a1 = [e for e in est_on_offs]
+            a1.sort(key=lambda x: x[0])
+            a2 = np.stack(a1, axis=0)
 
         if self.pedal:
             # Calculate binarized pedal offset output from regression output

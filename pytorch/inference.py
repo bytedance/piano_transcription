@@ -231,6 +231,34 @@ def inference(args):
         plt.savefig(fig_path)
         print('Plot to {}'.format(fig_path))
 
+    # import crash
+    # asdf
+    # bgn = 0
+    # L = 1000
+    # output_dict = transcribed_dict['output_dict']
+    # fig, axs = plt.subplots(5, 1, figsize=(15, 8), sharex=True)
+    # mel = librosa.feature.melspectrogram(audio, sr=16000, n_fft=2048, hop_length=160, n_mels=229, fmin=30, fmax=8000)
+    # axs[0].matshow(np.log(mel[:, bgn : bgn + L]), origin='lower', aspect='auto', cmap='jet')
+    # axs[1].matshow(output_dict['frame_output'][bgn : bgn + L].T, origin='lower', aspect='auto', cmap='jet')
+    # axs[2].matshow(output_dict['reg_onset_output'][bgn : bgn + L].T, origin='lower', aspect='auto', cmap='jet')
+    # axs[3].matshow(output_dict['reg_offset_output'][bgn : bgn + L].T, origin='lower', aspect='auto', cmap='jet')
+    # axs[4].plot(output_dict['pedal_frame_output'][bgn : bgn + L])
+    # axs[0].set_xlim(0, L)
+    # axs[4].set_xlabel('Frames')
+    # axs[0].set_title('Log mel spectrogram')
+    # axs[1].set_title('frame_output')
+    # axs[2].set_title('reg_onset_output')
+    # axs[3].set_title('reg_offset_output')
+    # axs[4].set_title('pedal_frame_output')
+    # plt.tight_layout(0, .05, 0)
+    # fig_path = 'results/{}.pdf'.format(get_filename(audio_path))
+    # plt.savefig(fig_path)
+    # print('Plot to {}'.format(fig_path))
+
+    # plt.plot(output_dict['reg_offset_output'][bgn : bgn + L, 34])
+    # plt.savefig('_zz.pdf')
+
+
     
 
 if __name__ == '__main__':
