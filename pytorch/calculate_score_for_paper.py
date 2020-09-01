@@ -14,7 +14,8 @@ from sklearn import metrics
 from concurrent.futures import ProcessPoolExecutor
  
 from utilities import (create_folder, get_filename, traverse_folder, 
-    int16_to_float32, TargetProcessor, RegressionPostProcessor, note_to_freq)
+    int16_to_float32, note_to_freq, TargetProcessor, RegressionPostProcessor, 
+    OnsetsFramesPostProcessor)
 import config
 from inference import PianoTranscription
 
@@ -104,8 +105,8 @@ def infer_prob(args):
                 pickle.dump(total_dict, open(prob_path, 'wb'))
 
 
-class RegressionScoreCalculator(object):
-    def __init__(self, hdf5s_dir, probs_dir, split):
+class ScoreCalculator(object):
+    def __init__(self, hdf5s_dir, probs_dir, split, post_processor_type='regression'):
         """Evaluate piano transcription metrics of the post processed 
         pre-calculated system outputs.
         """
@@ -125,6 +126,8 @@ class RegressionScoreCalculator(object):
         self.pedal_offset_threshold = 0.2
         self.pedal_offset_ratio = 0.2
         self.pedal_offset_min_tolerance = 0.05
+
+        self.post_processor_type = post_processor_type
         
         (hdf5_names, self.hdf5_paths) = traverse_folder(hdf5s_dir)
 
@@ -157,10 +160,8 @@ class RegressionScoreCalculator(object):
             list_args = list_args[0 :] 
             for i in range(len(list_args)):
                 print(i, list_args[i][1])
-                if 'MAPS_MUS-chpn-p4_ENSTDkAm' in list_args[i][1]:
-                    self.calculate_score_per_song(list_args[i])
-            import crash
-            asdf
+                # if 'MAPS_MUS-chpn-p4_ENSTDkAm' in list_args[i][1]:
+                self.calculate_score_per_song(list_args[i])
 
         # Calculate metrics in parallel
         with ProcessPoolExecutor() as exector:
@@ -173,6 +174,7 @@ class RegressionScoreCalculator(object):
         
         return stats_dict
 
+    '''
     def calculate_score_per_song(self, args):
         """Calculate score per song.
 
@@ -260,8 +262,6 @@ class RegressionScoreCalculator(object):
                     offset_ratio=self.offset_ratio, 
                     offset_min_tolerance=self.offset_min_tolerance)
 
-            import crash
-            asdf
             a1 = [e for e in est_on_offs]
             a1.sort(key=lambda x: x[0])
             a2 = np.stack(a1, axis=0)
@@ -313,6 +313,124 @@ class RegressionScoreCalculator(object):
         return_dict['note_recall'] = note_recall
         return_dict['note_f1'] = note_f1
         return return_dict
+    '''
+
+    def calculate_score_per_song(self, args):
+        """Calculate score per song.
+
+        Args:
+          args: [n, hdf5_path, params]
+        """
+        n = args[0]
+        hdf5_path = args[1]
+        [onset_threshold, offset_threshold, frame_threshold] = args[2]
+
+        return_dict = {}
+
+        # Load pre-calculated system outputs and ground truths
+        prob_path = os.path.join(self.probs_dir, '{}.pkl'.format(get_filename(hdf5_path)))
+        total_dict = pickle.load(open(prob_path, 'rb'))
+
+        ref_on_off_pairs = total_dict['ref_on_off_pairs']
+        ref_midi_notes = total_dict['ref_midi_notes']
+        output_dict = total_dict
+
+        # Calculate frame metric
+        if self.evaluate_frame:
+            frame_threshold = frame_threshold
+            y_pred = (np.sign(total_dict['frame_output'] - frame_threshold) + 1) / 2
+            y_pred[np.where(y_pred==0.5)] = 0
+            y_true = total_dict['frame_roll']
+            y_pred = y_pred[0 : y_true.shape[0], :]
+            y_true = y_true[0 : y_pred.shape[0], :]
+
+            tmp = metrics.precision_recall_fscore_support(y_true.flatten(), y_pred.flatten())
+            return_dict['frame_precision'] = tmp[0][1]
+            return_dict['frame_recall'] = tmp[1][1]
+            return_dict['frame_f1'] = tmp[2][1]
+
+        # Post processor
+        if self.post_processor_type == 'regression':
+            post_processor = RegressionPostProcessor(self.frames_per_second, 
+                classes_num=self.classes_num, onset_threshold=onset_threshold, 
+                offset_threshold=offset_threshold, 
+                frame_threshold=frame_threshold, 
+                pedal_offset_threshold=self.pedal_offset_threshold)
+        elif self.post_processor_type == 'onsets_frames':
+            post_processor = OnsetsFramesPostProcessor(self.frames_per_second, 
+                classes_num=self.classes_num)
+
+        (est_on_off_note_vels, est_pedal_on_offs) = \
+            post_processor.output_dict_to_note_pedal_arrays(output_dict)
+
+        # # Detect piano notes from output_dict
+        est_on_offs = est_on_off_note_vels[:, 0 : 2]
+        est_midi_notes = est_on_off_note_vels[:, 2]
+        est_vels = est_on_off_note_vels[:, 3] * self.velocity_scale
+
+        # Calculate note metrics
+        if self.velocity:
+            (note_precision, note_recall, note_f1, _) = (
+                   mir_eval.transcription_velocity.precision_recall_f1_overlap(
+                       ref_intervals=ref_on_off_pairs,
+                       ref_pitches=note_to_freq(ref_midi_notes),
+                       ref_velocities=total_dict['ref_velocity'],
+                       est_intervals=est_on_offs,
+                       est_pitches=note_to_freq(est_midi_notes),
+                       est_velocities=est_vels,
+                       onset_tolerance=self.onset_tolerance, 
+                       offset_ratio=self.offset_ratio, 
+                       offset_min_tolerance=self.offset_min_tolerance))
+        else:
+            note_precision, note_recall, note_f1, _ = \
+                mir_eval.transcription.precision_recall_f1_overlap(
+                    ref_intervals=ref_on_off_pairs, 
+                    ref_pitches=note_to_freq(ref_midi_notes), 
+                    est_intervals=est_on_offs, 
+                    est_pitches=note_to_freq(est_midi_notes), 
+                    onset_tolerance=self.onset_tolerance, 
+                    offset_ratio=self.offset_ratio, 
+                    offset_min_tolerance=self.offset_min_tolerance)
+
+        if self.pedal:
+            # Detect piano notes from output_dict
+            ref_pedal_on_off_pairs = output_dict['ref_pedal_on_off_pairs']
+
+            # Calculate pedal metrics
+            if len(ref_pedal_on_off_pairs) > 0:
+                pedal_precision, pedal_recall, pedal_f1, _ = \
+                    mir_eval.transcription.precision_recall_f1_overlap(
+                        ref_intervals=ref_pedal_on_off_pairs, 
+                        ref_pitches=np.ones(ref_pedal_on_off_pairs.shape[0]), 
+                        est_intervals=est_pedal_on_offs, 
+                        est_pitches=np.ones(est_pedal_on_offs.shape[0]), 
+                        onset_tolerance=0.2, 
+                        offset_ratio=self.pedal_offset_ratio, 
+                        offset_min_tolerance=self.pedal_offset_min_tolerance)
+
+                return_dict['pedal_precision'] = pedal_precision
+                return_dict['pedal_recall'] = pedal_recall
+                return_dict['pedal_f1'] = pedal_f1
+
+                y_pred = (np.sign(total_dict['pedal_frame_output'] - 0.5) + 1) / 2
+                y_pred[np.where(y_pred==0.5)] = 0
+                y_true = total_dict['pedal_frame_roll']
+                y_pred = y_pred[0 : y_true.shape[0]]
+                y_true = y_true[0 : y_pred.shape[0]]
+                
+                tmp = metrics.precision_recall_fscore_support(y_true.flatten(), y_pred.flatten())
+                return_dict['pedal_frame_precision'] = tmp[0][1]
+                return_dict['pedal_frame_recall'] = tmp[1][1]
+                return_dict['pedal_frame_f1'] = tmp[2][1]
+
+                print('pedal f1: {:.3f}, frame f1: {:.3f}'.format(pedal_f1, return_dict['pedal_frame_f1']))
+
+        print('note f1: {:.3f}'.format(note_f1))
+
+        return_dict['note_precision'] = note_precision
+        return_dict['note_recall'] = note_recall
+        return_dict['note_f1'] = note_f1
+        return return_dict
 
 
 def calculate_metrics(args, thresholds=None):
@@ -323,6 +441,9 @@ def calculate_metrics(args, thresholds=None):
     augmentation = args.augmentation
     dataset = args.dataset
     split = args.split
+
+    post_processor_type = 'onsets_frames'
+    # post_processor_type = 'regresssion'
     
     # Paths
     hdf5s_dir = os.path.join(workspace, 'hdf5s', dataset)
@@ -330,7 +451,7 @@ def calculate_metrics(args, thresholds=None):
         'augmentation={}'.format(augmentation), 'dataset={}'.format(dataset), 'split={}'.format(split))
 
     # Score calculator
-    score_calculator = RegressionScoreCalculator(hdf5s_dir, probs_dir, split=split)
+    score_calculator = ScoreCalculator(hdf5s_dir, probs_dir, split=split, post_processor_type=post_processor_type)
 
     if not thresholds:
         thresholds = [0.3, 0.3, 0.3]
