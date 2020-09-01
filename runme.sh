@@ -4,7 +4,7 @@
 # Inference with note and pedal
 MODEL_TYPE="Note_pedal"
 CHECKPOINT_PATH='released_models/note_F1=0.9677_pedal_F1=0.8658.pth'
-python3 pytorch/inference.py --model_type=$MODEL_TYPE --checkpoint_path=$CHECKPOINT_PATH --audio_path='resources/cut_liszt.mp3' --checkpoint_path=$CHECKPOINT_PATH --cuda
+python3 pytorch/inference.py --model_type=$MODEL_TYPE --checkpoint_path=$CHECKPOINT_PATH --audio_path='resources/cut_liszt.mp3' --cuda
 
 # Inference without pedal
 MODEL_TYPE="Regress_onset_offset_frame_velocity_CRNN"
@@ -39,8 +39,13 @@ NOTE_PEDAL_CHECKPOINT_PATH="released_models/note_F1=0.9677_pedal_F1=0.8658.pth"
 python3 pytorch/combine_note_and_pedal_models.py --note_checkpoint_path=$NOTE_CHECKPOINT_PATH --pedal_checkpoint_path=$PEDAL_CHECKPOINT_PATH --output_checkpoint_path=$NOTE_PEDAL_CHECKPOINT_PATH
 
 # Inference probability for evaluation
-PROBS_DIR=$WORKSPACE"/probs/Note_pedal"
-python3 pytorch/calculate_score_for_paper.py infer_prob --workspace=$WORKSPACE --model_type='Note_pedal' --checkpoint_path=$NOTE_PEDAL_CHECKPOINT_PATH --probs_dir=$PROBS_DIR --split='test' --cuda
+# PROBS_DIR=$WORKSPACE"/probs/Note_pedal"
+python3 pytorch/calculate_score_for_paper.py infer_prob --workspace=$WORKSPACE --model_type='Note_pedal' --checkpoint_path=$NOTE_PEDAL_CHECKPOINT_PATH --augmentation='none' --dataset='maestro' --split='test' --cuda
 
 # Calculate metrics
-python3 pytorch/calculate_score_for_paper.py calculate_metrics --workspace=$WORKSPACE --probs_dir=$PROBS_DIR --split='test'
+python3 pytorch/calculate_score_for_paper.py calculate_metrics --workspace=$WORKSPACE --model_type='Note_pedal' --augmentation='aug' --dataset='maestro' --split='test'
+python3 pytorch/calculate_score_for_paper.py calculate_metrics --workspace=$WORKSPACE --model_type='Note_pedal' --augmentation='aug' --dataset='maps' --split='test'
+
+
+###
+python3 pytorch/main.py train --workspace=$WORKSPACE --model_type='Google_onsets_frames' --loss_type='google_onset_offset_frame_velocity_bce' --augmentation='none' --max_note_shift=0 --batch_size=12 --learning_rate=5e-4 --reduce_iteration=10000 --resume_iteration=0 --early_stop=300000 --cuda

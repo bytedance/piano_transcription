@@ -251,7 +251,6 @@ class Regress_onset_offset_frame_velocity_CRNN(nn.Module):
         return output_dict
 
 
-####################################
 class Regress_pedal_CRNN(nn.Module):
     def __init__(self, frames_per_second, classes_num):
         super(Regress_pedal_CRNN, self).__init__()
@@ -326,7 +325,6 @@ class Regress_pedal_CRNN(nn.Module):
         return output_dict
 
 
-####################################
 # This model is not trained, but combined from the pretrained note and pedal models.
 class Note_pedal(nn.Module):
     def __init__(self, frames_per_second, classes_num):

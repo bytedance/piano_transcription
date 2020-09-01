@@ -20,6 +20,7 @@ import torch.utils.data
 from utilities import (create_folder, get_filename, create_logging, 
     StatisticsContainer, RegressionPostProcessor) 
 from data_generator import MaestroDataset, Augmentor, Sampler, TestSampler, collate_fn
+from data_generator_random_target import RandomMaestroDataset
 from models import Regress_onset_offset_frame_velocity_CRNN, Regress_pedal_CRNN
 from pytorch_utils import move_data_to_device
 from losses import get_loss_func
@@ -113,9 +114,9 @@ def train(args):
         raise Exception('Incorrect argumentation!')
     
     # Dataset
-    train_dataset = MaestroDataset(hdf5s_dir=hdf5s_dir, 
+    train_dataset = RandomMaestroDataset(hdf5s_dir=hdf5s_dir, 
         segment_seconds=segment_seconds, frames_per_second=frames_per_second, 
-        max_note_shift=max_note_shift, augmentor=augmentor)
+        max_note_shift=max_note_shift, augmentor=augmentor, uniform_max=5)
 
     evaluate_dataset = MaestroDataset(hdf5s_dir=hdf5s_dir, 
         segment_seconds=segment_seconds, frames_per_second=frames_per_second, 

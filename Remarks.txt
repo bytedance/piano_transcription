@@ -1,0 +1,8 @@
+2020.03
+V1.0 is the reimplementation of Google's onset paper
+
+2020.05
+V2.0 is cleaned from piano_transcription2. To see onset and offset models and models for paper, please see piano_transcription2.
+
+2020.06
+V3.0 implments pedal transcription.

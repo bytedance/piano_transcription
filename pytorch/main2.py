@@ -22,7 +22,7 @@ from utilities import (create_folder, get_filename, create_logging,
 from data_generator import MaestroDataset, Augmentor, Sampler, TestSampler, collate_fn
 from models import Regress_onset_offset_frame_velocity_CRNN, Regress_pedal_CRNN
 from pytorch_utils import move_data_to_device
-from losses import get_loss_func
+from losses2 import get_loss_func
 from evaluate import SegmentEvaluator
 import config
 
