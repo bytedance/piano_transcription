@@ -84,20 +84,19 @@ class ConvBlock(nn.Module):
 
         
     def forward(self, input, pool_size=(2, 2), pool_type='avg'):
-        
-        x = input
-        x = F.relu_(self.bn1(self.conv1(x)))
+        """
+        Args:
+          input: (batch_size, in_channels, time_steps, freq_bins)
+
+        Outputs:
+          output: (batch_size, out_channels, classes_num)
+        """
+
+        x = F.relu_(self.bn1(self.conv1(input)))
         x = F.relu_(self.bn2(self.conv2(x)))
-        if pool_type == 'max':
-            x = F.max_pool2d(x, kernel_size=pool_size)
-        elif pool_type == 'avg':
+        
+        if pool_type == 'avg':
             x = F.avg_pool2d(x, kernel_size=pool_size)
-        elif pool_type == 'avg+max':
-            x1 = F.avg_pool2d(x, kernel_size=pool_size)
-            x2 = F.max_pool2d(x, kernel_size=pool_size)
-            x = x1 + x2
-        else:
-            raise Exception('Incorrect argument!')
         
         return x
 
@@ -128,6 +127,14 @@ class AcousticModelCRnn8Dropout(nn.Module):
         init_layer(self.fc)
 
     def forward(self, input):
+        """
+        Args:
+          input: (batch_size, channels_num, time_steps, freq_bins)
+
+        Outputs:
+          output: (batch_size, time_steps, classes_num)
+        """
+
         x = self.conv_block1(input, pool_size=(1, 2), pool_type='avg')
         x = F.dropout(x, p=0.2, training=self.training)
         x = self.conv_block2(x, pool_size=(1, 2), pool_type='avg')
@@ -228,14 +235,14 @@ class Regress_onset_offset_frame_velocity_CRNN(nn.Module):
         reg_offset_output = self.reg_offset_model(x)    # (batch_size, time_steps, classes_num)
         velocity_output = self.velocity_model(x)    # (batch_size, time_steps, classes_num)
  
-        # Use velocity to improve onset regression
+        # Use velocities to condition onset regression
         x = torch.cat((reg_onset_output, (reg_onset_output ** 0.5) * velocity_output.detach()), dim=2)
         (x, _) = self.reg_onset_gru(x)
         x = F.dropout(x, p=0.5, training=self.training, inplace=False)
         reg_onset_output = torch.sigmoid(self.reg_onset_fc(x))
         """(batch_size, time_steps, classes_num)"""
 
-        # Use onset and offset to improve framewise classification
+        # Use onsets and offsets to condition frame-wise classification
         x = torch.cat((frame_output, reg_onset_output.detach(), reg_offset_output.detach()), dim=2)
         (x, _) = self.frame_gru(x)
         x = F.dropout(x, p=0.5, training=self.training, inplace=False)
@@ -251,7 +258,6 @@ class Regress_onset_offset_frame_velocity_CRNN(nn.Module):
         return output_dict
 
 
-####################################
 class Regress_pedal_CRNN(nn.Module):
     def __init__(self, frames_per_second, classes_num):
         super(Regress_pedal_CRNN, self).__init__()
@@ -307,6 +313,7 @@ class Regress_pedal_CRNN(nn.Module):
             'velocity_output': (batch_size, time_steps, classes_num)
           }
         """
+
         x = self.spectrogram_extractor(input)   # (batch_size, 1, time_steps, freq_bins)
         x = self.logmel_extractor(x)    # (batch_size, 1, time_steps, mel_bins)
 
@@ -326,11 +333,10 @@ class Regress_pedal_CRNN(nn.Module):
         return output_dict
 
 
-####################################
-# This model is not trained, but combined from the pretrained note and pedal models.
+# This model is not trained, but is combined from the trained note and pedal models.
 class Note_pedal(nn.Module):
     def __init__(self, frames_per_second, classes_num):
-        """Combination of note and pedal model.
+        """The combination of note and pedal model.
         """
         super(Note_pedal, self).__init__()
 
