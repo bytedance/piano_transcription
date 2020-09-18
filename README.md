@@ -1,27 +1,35 @@
 
 # Piano transcription
 
-Piano transcription is the task to transcribe piano recordings to MIDI. That is, transcribe waveform to symbolic music notes. This codebase contains PyTorch implementation of 1. Inference a piano audio recording to MIDI using pretrained model; 2. Training a piano transcription system. 
+Piano transcription is the task of transcribing piano recordings into MIDI files. This repo is the PyTorch implementation of our proposed high-resolution piano transcription system [1].
 
-This codebase is the implementation of [1]: "High resolution piano transcription by regressing onset and offset time stamps". Both of piano notes and piano pedals are transcribed. First, audio recordings are split into 10-second audio segments. Then log mel spectrogram is used as feature. The targets for training includes onset regression, offset regression, framewise classification and velocity regression. CNN + BiGRU is used to build the piano transcription system. We have used this piano transcription system to build a GiantMIDI-Piano dataset [2]. See demos here: https://www.youtube.com/watch?v=5U-WL0QvKCg
+## Demos
+https://www.youtube.com/watch?v=5U-WL0QvKCg
 
-## Transcribe using pretrained model
-Transcribe a piano recording is easy! First, install dependencies in requirements.txt
+## Environments
+This codebase is developed with Python 3.7 and PyTorch 1.4.0 (Should work with other versions).
 
-Then, execute the following command to transcribe an audio recording into an MIDI file.
+Install dependencies:
+```
+pip install -r requirements.txt
+```
+
+## Piano transcription using pretrained model
+Users can transcribe their favorite piano recordings using pretrained model without training. First, download the pretrained model from https://zenodo.org/record/4034264. Then, execute the following commands to transcribe this [audio](resources/liszt.mp3).
 
 ```
+CHECKPOINT_PATH="CRNN_note_F1=0.9677_pedal_F1=0.9186.pth"
+wget -O $CHECKPOINT_PATH "https://zenodo.org/record/4034264/files/CRNN_note_F1%3D0.9677_pedal_F1%3D0.9186.pth?download=1"
 MODEL_TYPE="Note_pedal"
-CHECKPOINT_PATH='note_F1=0.9677_pedal_F1=0.8658.pth'
-python3 pytorch/inference.py --model_type=$MODEL_TYPE --checkpoint_path=$CHECKPOINT_PATH --audio_path='resources/cut_liszt.mp3' --checkpoint_path=$CHECKPOINT_PATH --cuda
+python3 pytorch/inference.py --model_type=$MODEL_TYPE --checkpoint_path=$CHECKPOINT_PATH --audio_path='resources/cut_liszt.mp3' --cuda
 ```
 
-## Training a piano transcription system from scratch
+## Train a piano transcription system from scratch
 
-This section provides instructions of training a piano transcription system.
+This section provides instructions if users would like to train a piano transcription system from scratch.
 
 ### 0. Prepare data
-MAESTRO dataset [1] is used for training the piano transcription system. MAESTRO consists of over 200 hours of virtuosic piano performances captured with fine alignment (~3 ms) between note labels and audio waveforms. MAESTRO dataset can be downloaded from https://magenta.tensorflow.org/datasets/maestro. This codebase used MAESTRO V2.0.0 for training.
+We use MAESTRO dataset V2.0.0 [1] to train the piano transcription system. MAESTRO consists of over 200 hours of virtuosic piano performances captured with fine alignment (~3 ms) between note labels and audio waveforms. MAESTRO dataset can be downloaded from https://magenta.tensorflow.org/datasets/maestro.
 
 Statistics of MAESTRO V2.0.0 [[ref]](https://magenta.tensorflow.org/datasets/maestro#v200):
 
@@ -64,10 +72,12 @@ dataset_root
 
 ### 1. Train
 
-To train the systems, modify and execute commands in runme.sh, including:
+Execute the commands line by line in runme.sh, including:
+
 1) Config dataset path and your workspace.
 2) Pack audio recordings to hdf5 files.
-3) Train piano note and piano pedal transcription systems individually.
+3) Train piano note transcription system.
+4) Train piano pedal transcription system.
 4) Combine piano note and piano pedal transcription systems.
 4) Evaluate.
 
@@ -116,9 +126,9 @@ Model saved to .../workspaces/piano_transcription/checkpoints/main/Regress_onset
 
 
 ## Contact
-Qiuqiang Kong
+Qiuqiang Kong, kongqiuqiang@bytedance.com
 
 ## Cite
-[1] Qiuqiang Kong, Bochen Li, Xuchen Song, Yuxuan Wang., High resolution piano transcription by regressing onset and offset time stamps, [To appear] 2020
+[1] Qiuqiang Kong, Bochen Li, Xuchen Song, Yuan Wan, Yuxuan Wang., High-resolution Piano Transcription with Pedals by Regressing Onsets and Offsets Times_v0.1, [To appear] 2020.
 
-[2] Qiuqiang Kong, Bochen Li, Jitong Chen, Yuxuan Wang, GiantMIDI-Piano A MIDI dataset for classical piano music compositions, [To appear] 2020
+[2] Qiuqiang Kong, Bochen Li, Jitong Chen, Yuxuan Wang, GiantMIDI-Piano A MIDI dataset for classical piano music compositions, [To appear] 2020.
