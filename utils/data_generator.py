@@ -6,23 +6,28 @@ import csv
 import time
 import collections
 import librosa
+import sox
 import logging
 
 from utilities import (create_folder, int16_to_float32, traverse_folder, 
-    TargetProcessor, write_events_to_midi, plot_waveform_midi_targets)
+    pad_truncate_sequence, TargetProcessor, write_events_to_midi, 
+    plot_waveform_midi_targets)
 import config
 
 
 class MaestroDataset(object):
     def __init__(self, hdf5s_dir, segment_seconds, frames_per_second, 
-        max_note_shift=0):
-        """Maestro dataset. Will be used for DataLoader.
-
+        max_note_shift=0, augmentor=None):
+        """This class takes the meta of an audio segment as input, and return 
+        the waveform and targets of the audio segment. This class is used by 
+        DataLoader. 
+        
         Args:
           feature_hdf5s_dir: str
           segment_seconds: float
           frames_per_second: int
           max_note_shift: int, number of semitone for pitch augmentation
+          augmentor: object
         """
         self.hdf5s_dir = hdf5s_dir
         self.segment_seconds = segment_seconds
@@ -32,6 +37,7 @@ class MaestroDataset(object):
         self.begin_note = config.begin_note
         self.classes_num = config.classes_num
         self.segment_samples = int(self.sample_rate * self.segment_seconds)
+        self.augmentor = augmentor
 
         self.random_state = np.random.RandomState(1234)
 
@@ -58,7 +64,11 @@ class MaestroDataset(object):
             'frame_roll': (frames_num, classes_num), 
             'velocity_roll': (frames_num, classes_num), 
             'mask_roll':  (frames_num, classes_num), 
-            'pedal_roll': (frames_num,)}
+            'pedal_onset_roll': (frames_num,), 
+            'pedal_offset_roll': (frames_num,), 
+            'reg_pedal_onset_roll': (frames_num,), 
+            'reg_pedal_offset_roll': (frames_num,), 
+            'pedal_frame_roll': (frames_num,)}
         """
         [year, hdf5_name, start_time] = meta
         hdf5_path = os.path.join(self.hdf5s_dir, year, hdf5_name)
@@ -79,10 +89,13 @@ class MaestroDataset(object):
 
             waveform = int16_to_float32(hf['waveform'][start_sample : end_sample])
 
+            if self.augmentor:
+                waveform = self.augmentor.augment(waveform)
+
             if note_shift != 0:
                 """Augment pitch"""
                 waveform = librosa.effects.pitch_shift(waveform, self.sample_rate, 
-                    note_shift, bins_per_octave=12)#, res_type='kaiser_best')
+                    note_shift, bins_per_octave=12)
 
             data_dict['waveform'] = waveform
 
@@ -106,9 +119,47 @@ class MaestroDataset(object):
         return data_dict
 
 
+class Augmentor(object):
+    def __init__(self):
+        """Data augmentor."""
+        
+        self.sample_rate = config.sample_rate
+        self.random_state = np.random.RandomState(1234)
+
+    def augment(self, x):
+        clip_samples = len(x)
+
+        logger = logging.getLogger('sox')
+        logger.propagate = False
+
+        tfm = sox.Transformer()
+        tfm.set_globals(verbosity=0)
+
+        tfm.pitch(self.random_state.uniform(-0.1, 0.1, 1)[0])
+        tfm.contrast(self.random_state.uniform(0, 100, 1)[0])
+
+        tfm.equalizer(frequency=self.loguniform(32, 4096, 1)[0], 
+            width_q=self.random_state.uniform(1, 2, 1)[0], 
+            gain_db=self.random_state.uniform(-30, 10, 1)[0])
+
+        tfm.equalizer(frequency=self.loguniform(32, 4096, 1)[0], 
+            width_q=self.random_state.uniform(1, 2, 1)[0], 
+            gain_db=self.random_state.uniform(-30, 10, 1)[0])
+        
+        tfm.reverb(reverberance=self.random_state.uniform(0, 70, 1)[0])
+
+        aug_x = tfm.build_array(input_array=x, sample_rate_in=self.sample_rate)
+        aug_x = pad_truncate_sequence(aug_x, clip_samples)
+        
+        return aug_x
+
+    def loguniform(self, low, high, size):
+        return np.exp(self.random_state.uniform(np.log(low), np.log(high), size))
+
+
 class Sampler(object):
     def __init__(self, hdf5s_dir, split, segment_seconds, hop_seconds, 
-            batch_size, training, mini_data, random_seed=1234):
+            batch_size, mini_data, random_seed=1234):
         """Sampler is used to sample segments for training or evaluation.
 
         Args:
@@ -117,13 +168,10 @@ class Sampler(object):
           segment_seconds: float
           hop_seconds: float
           batch_size: int
-          training: bool, True: sample segments for training; False: sample 
-            segments for evaluation
           mini_data: bool, sample from a small amount of data for debugging
         """
         assert split in ['train', 'validation', 'test']
         self.hdf5s_dir = hdf5s_dir
-        self.training = training
         self.segment_seconds = segment_seconds
         self.hop_seconds = hop_seconds
         self.sample_rate = config.sample_rate
@@ -192,8 +240,8 @@ class Sampler(object):
 
 class TestSampler(object):
     def __init__(self, hdf5s_dir, split, segment_seconds, hop_seconds, 
-            batch_size, training, mini_data, random_seed=1234):
-        """Sampler is used to sample segments for training or evaluation.
+            batch_size, mini_data, random_seed=1234):
+        """Sampler for testing.
 
         Args:
           hdf5s_dir: str
@@ -201,13 +249,10 @@ class TestSampler(object):
           segment_seconds: float
           hop_seconds: float
           batch_size: int
-          training: bool, True: sample segments for training; False: sample 
-            segments for evaluation
           mini_data: bool, sample from a small amount of data for debugging
         """
         assert split in ['train', 'validation', 'test']
         self.hdf5s_dir = hdf5s_dir
-        self.training = training
         self.segment_seconds = segment_seconds
         self.hop_seconds = hop_seconds
         self.sample_rate = config.sample_rate
