@@ -4,10 +4,10 @@
 Piano transcription is the task of transcribing piano recordings into MIDI files. This repo is the PyTorch implementation of our proposed high-resolution piano transcription system [1].
 
 ## Demos
-https://www.youtube.com/watch?v=5U-WL0QvKCg
+Here is a demo of our piano transcription system: https://www.youtube.com/watch?v=5U-WL0QvKCg
 
 ## Environments
-This codebase is developed with Python 3.7 and PyTorch 1.4.0 (Should work with other versions).
+This codebase is developed with Python 3.7 and PyTorch 1.4.0 (Should work with other versions, but not fully tested).
 
 Install dependencies:
 ```
@@ -125,10 +125,11 @@ Model saved to .../workspaces/piano_transcription/checkpoints/main/Regress_onset
 <img src="resources/cut_liszt.png">
 
 
+## Applications
+We have built a large-scale classical piano MIDI dataset using our piano transcription system. See https://github.com/bytedance/GiantMIDI-Piano for details.
+
 ## Contact
 Qiuqiang Kong, kongqiuqiang@bytedance.com
 
 ## Cite
 [1] Qiuqiang Kong, Bochen Li, Xuchen Song, Yuan Wan, Yuxuan Wang., High-resolution Piano Transcription with Pedals by Regressing Onsets and Offsets Times_v0.1, [To appear] 2020.
-
-[2] Qiuqiang Kong, Bochen Li, Jitong Chen, Yuxuan Wang, GiantMIDI-Piano A MIDI dataset for classical piano music compositions, [To appear] 2020.
