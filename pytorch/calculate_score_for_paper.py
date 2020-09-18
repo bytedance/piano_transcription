@@ -2,7 +2,6 @@ import os
 import sys
 sys.path.insert(1, os.path.join(sys.path[0], '../utils'))
 sys.path.insert(1, os.path.join(sys.path[0], '../../autoth'))
-from autoth.core import HyperParamsOptimizer
 import numpy as np
 import argparse
 import librosa
@@ -15,25 +14,37 @@ from sklearn import metrics
 from concurrent.futures import ProcessPoolExecutor
  
 from utilities import (create_folder, get_filename, traverse_folder, 
-    int16_to_float32, TargetProcessor, RegressionPostProcessor, note_to_freq)
+    int16_to_float32, note_to_freq, TargetProcessor, RegressionPostProcessor, 
+    OnsetsFramesPostProcessor)
 import config
 from inference import PianoTranscription
 
 
 def infer_prob(args):
-    """Inference the output probabilites of MAESTRO dataset.
+    """Inference the output probabilites on MAESTRO dataset, and write out to
+    disk. This will reduce duplicate computation for later evaluation.
 
     Args:
+      workspace: str, directory of your workspace
+      model_type: str
+      augmentation: str, e.g. 'none'
+      checkpoint_path: str
+      dataset: 'maestro'
+      split: 'test'
+      post_processor_type: 'regression' | 'onsets_frames'. High-resolution 
+        system should use 'regression'. 'onsets_frames' is only used to compare
+        with Googl's onsets and frames system.
       cuda: bool
-      audio_path: str
     """
 
     # Arugments & parameters
     workspace = args.workspace
     model_type = args.model_type
     checkpoint_path = args.checkpoint_path
-    probs_dir = args.probs_dir
+    augmentation = args.augmentation
+    dataset = args.dataset
     split = args.split
+    post_processor_type = args.post_processor_type
     device = torch.device('cuda') if args.cuda and torch.cuda.is_available() else torch.device('cpu')
     
     sample_rate = config.sample_rate
@@ -42,16 +53,19 @@ def infer_prob(args):
     frames_per_second = config.frames_per_second
     classes_num = config.classes_num
     begin_note = config.begin_note
-    dataset = 'maestro'
 
     # Paths
     hdf5s_dir = os.path.join(workspace, 'hdf5s', dataset)
-
+    probs_dir = os.path.join(workspace, 'probs', 
+        'model_type={}'.format(model_type), 
+        'augmentation={}'.format(augmentation), 'dataset={}'.format(dataset), 
+        'split={}'.format(split))
     create_folder(probs_dir)
 
     # Transcriptor
     transcriptor = PianoTranscription(model_type, device=device, 
-        checkpoint_path=checkpoint_path, segment_samples=segment_samples)
+        checkpoint_path=checkpoint_path, segment_samples=segment_samples, 
+        post_processor_type=post_processor_type)
 
     (hdf5_names, hdf5_paths) = traverse_folder(hdf5s_dir)
 
@@ -104,8 +118,8 @@ def infer_prob(args):
                 pickle.dump(total_dict, open(prob_path, 'wb'))
 
 
-class RegressionScoreCalculator(object):
-    def __init__(self, hdf5s_dir, probs_dir, split):
+class ScoreCalculator(object):
+    def __init__(self, hdf5s_dir, probs_dir, split, post_processor_type='regression'):
         """Evaluate piano transcription metrics of the post processed 
         pre-calculated system outputs.
         """
@@ -114,14 +128,19 @@ class RegressionScoreCalculator(object):
         self.frames_per_second = config.frames_per_second
         self.classes_num = config.classes_num
         self.velocity_scale = config.velocity_scale
-        self.velocity = False
+        self.velocity = True  # True | False
         self.pedal = True
 
         self.evaluate_frame = True
         self.onset_tolerance = 0.05
-        self.offset_ratio = None
+        self.offset_ratio = 0.2  # None | 0.2
         self.offset_min_tolerance = 0.05
+
         self.pedal_offset_threshold = 0.2
+        self.pedal_offset_ratio = 0.2  # None | 0.2
+        self.pedal_offset_min_tolerance = 0.05
+
+        self.post_processor_type = post_processor_type
         
         (hdf5_names, self.hdf5_paths) = traverse_folder(hdf5s_dir)
 
@@ -153,10 +172,8 @@ class RegressionScoreCalculator(object):
         if debug:
             list_args = list_args[0 :] 
             for i in range(len(list_args)):
-                print(i)
+                print(i, list_args[i][1])
                 self.calculate_score_per_song(list_args[i])
-            import crash
-            asdf
 
         # Calculate metrics in parallel
         with ProcessPoolExecutor() as exector:
@@ -204,30 +221,24 @@ class RegressionScoreCalculator(object):
             return_dict['frame_f1'] = tmp[2][1]
 
         # Post processor
-        post_processor = RegressionPostProcessor(self.frames_per_second, 
-            classes_num=self.classes_num, onset_threshold=onset_threshold, 
-            offset_threshold=offset_threshold, 
-            frame_threshold=frame_threshold, 
-            pedal_offset_threshold=self.pedal_offset_threshold)
+        if self.post_processor_type == 'regression':
+            post_processor = RegressionPostProcessor(self.frames_per_second, 
+                classes_num=self.classes_num, onset_threshold=onset_threshold, 
+                offset_threshold=offset_threshold, 
+                frame_threshold=frame_threshold, 
+                pedal_offset_threshold=self.pedal_offset_threshold)
 
-        # Calculate binarized onset output from regression output
-        (onset_output, onset_shift_output) = \
-            post_processor.get_binarized_output_from_regression(
-                reg_output=output_dict['reg_onset_output'], 
-                threshold=onset_threshold, neighbour=2)
-        output_dict['onset_output'] = onset_output
-        output_dict['onset_shift_output'] = onset_shift_output
+        elif self.post_processor_type == 'onsets_frames':
+            post_processor = OnsetsFramesPostProcessor(self.frames_per_second, 
+                classes_num=self.classes_num)
 
-        # Calculate binarized offset output from regression output
-        (offset_output, offset_shift_output) = \
-            post_processor.get_binarized_output_from_regression(
-                reg_output=output_dict['reg_offset_output'], 
-                threshold=offset_threshold, neighbour=4)
-        output_dict['offset_output'] = offset_output
-        output_dict['offset_shift_output'] = offset_shift_output
+        # Post process piano note outputs to piano note and pedal events information
+        (est_on_off_note_vels, est_pedal_on_offs) = \
+            post_processor.output_dict_to_note_pedal_arrays(output_dict)
+        """est_on_off_note_vels: (events_num, 4), the four columns are: [onset_time, offset_time, piano_note, velocity], 
+        est_pedal_on_offs: (pedal_events_num, 2), the two columns are: [onset_time, offset_time]"""
 
-        # Detect piano notes from output_dict
-        est_on_off_note_vels = post_processor.output_dict_to_detected_notes(output_dict)
+        # # Detect piano notes from output_dict
         est_on_offs = est_on_off_note_vels[:, 0 : 2]
         est_midi_notes = est_on_off_note_vels[:, 2]
         est_vels = est_on_off_note_vels[:, 3] * self.velocity_scale
@@ -257,16 +268,8 @@ class RegressionScoreCalculator(object):
                     offset_min_tolerance=self.offset_min_tolerance)
 
         if self.pedal:
-            # Calculate binarized pedal offset output from regression output
-            (pedal_offset_output, pedal_offset_shift_output) = \
-                post_processor.get_binarized_output_from_regression(
-                    reg_output=output_dict['reg_pedal_offset_output'], 
-                    threshold=self.pedal_offset_threshold, neighbour=4)
-            output_dict['pedal_offset_output'] = pedal_offset_output
-
             # Detect piano notes from output_dict
             ref_pedal_on_off_pairs = output_dict['ref_pedal_on_off_pairs']
-            est_pedal_on_offs = post_processor.output_dict_to_detected_pedals(output_dict)
 
             # Calculate pedal metrics
             if len(ref_pedal_on_off_pairs) > 0:
@@ -276,8 +279,12 @@ class RegressionScoreCalculator(object):
                         ref_pitches=np.ones(ref_pedal_on_off_pairs.shape[0]), 
                         est_intervals=est_pedal_on_offs, 
                         est_pitches=np.ones(est_pedal_on_offs.shape[0]), 
-                        onset_tolerance=0.2)
+                        onset_tolerance=0.2, 
+                        offset_ratio=self.pedal_offset_ratio, 
+                        offset_min_tolerance=self.pedal_offset_min_tolerance)
 
+                return_dict['pedal_precision'] = pedal_precision
+                return_dict['pedal_recall'] = pedal_recall
                 return_dict['pedal_f1'] = pedal_f1
 
                 y_pred = (np.sign(total_dict['pedal_frame_output'] - 0.5) + 1) / 2
@@ -302,18 +309,37 @@ class RegressionScoreCalculator(object):
 
 
 def calculate_metrics(args, thresholds=None):
+    """Load pre-calculate probabilities, and apply thresholds to calculate 
+    metrics. Users may adjust the hyper-parameters in ScoreCalculator to 
+    evaluate with or without offset, velocity and pedals.
+
+    Args:
+      workspace: str, directory of your workspace
+      model_type: str
+      augmentation: str, e.g. 'none'
+      dataset: 'maestro'
+      split: 'test'
+      post_processor_type: 'regression' | 'onsets_frames'. High-resolution 
+        system should use 'regression'. 'onsets_frames' is only used to compare
+        with Google's onsets and frames system.
+      cuda: bool
+    """
 
     # Arugments & parameters
     workspace = args.workspace
-    probs_dir = args.probs_dir
+    model_type = args.model_type
+    augmentation = args.augmentation
+    dataset = args.dataset
     split = args.split
-    dataset = 'maestro'
-    
+    post_processor_type = args.post_processor_type
+
     # Paths
     hdf5s_dir = os.path.join(workspace, 'hdf5s', dataset)
+    probs_dir = os.path.join(workspace, 'probs', 'model_type={}'.format(model_type), 
+        'augmentation={}'.format(augmentation), 'dataset={}'.format(dataset), 'split={}'.format(split))
 
     # Score calculator
-    score_calculator = RegressionScoreCalculator(hdf5s_dir, probs_dir, split=split)
+    score_calculator = ScoreCalculator(hdf5s_dir, probs_dir, split=split, post_processor_type=post_processor_type)
 
     if not thresholds:
         thresholds = [0.3, 0.3, 0.3]
@@ -335,15 +361,20 @@ if __name__ == '__main__':
     parser_infer_prob = subparsers.add_parser('infer_prob')
     parser_infer_prob.add_argument('--workspace', type=str, required=True)
     parser_infer_prob.add_argument('--model_type', type=str, required=True)
+    parser_infer_prob.add_argument('--augmentation', type=str, required=True)
     parser_infer_prob.add_argument('--checkpoint_path', type=str, required=True)
-    parser_infer_prob.add_argument('--probs_dir', type=str, required=True)
+    parser_infer_prob.add_argument('--dataset', type=str, required=True, choices=['maestro', 'maps'])
     parser_infer_prob.add_argument('--split', type=str, required=True)
+    parser_infer_prob.add_argument('--post_processor_type', type=str, default='regression')
     parser_infer_prob.add_argument('--cuda', action='store_true', default=False)
 
     parser_metrics = subparsers.add_parser('calculate_metrics')
     parser_metrics.add_argument('--workspace', type=str, required=True)
-    parser_metrics.add_argument('--probs_dir', type=str, required=True)
+    parser_metrics.add_argument('--model_type', type=str, required=True)
+    parser_metrics.add_argument('--augmentation', type=str, required=True)
+    parser_metrics.add_argument('--dataset', type=str, required=True, choices=['maestro', 'maps'])
     parser_metrics.add_argument('--split', type=str, required=True)
+    parser_metrics.add_argument('--post_processor_type', type=str, default='regression')
 
     args = parser.parse_args()
 
