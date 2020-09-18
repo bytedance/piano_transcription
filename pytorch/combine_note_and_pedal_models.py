@@ -4,6 +4,9 @@ import torch
 
 
 def combine_note_and_pedal_models(args):
+    """Combine trained note transcription and pedal transcription models to a 
+    unified model.
+    """
 
     # Arguments & parameters
     note_checkpoint_path = args.note_checkpoint_path
