@@ -19,7 +19,7 @@ import torch.utils.data
 
 from utilities import (create_folder, get_filename, create_logging, 
     StatisticsContainer, RegressionPostProcessor) 
-from data_generator import MaestroDataset, Sampler, TestSampler, collate_fn
+from data_generator import MaestroDataset, Augmentor, Sampler, TestSampler, collate_fn
 from models import Regress_onset_offset_frame_velocity_CRNN, Regress_pedal_CRNN
 from pytorch_utils import move_data_to_device
 from losses import get_loss_func
@@ -40,7 +40,7 @@ def train(args):
       reduce_iteration: int
       resume_iteration: int
       early_stop: int
-      cuda: bool
+      device: 'cuda' | 'cpu'
       mini_data: bool
     """
 
@@ -75,19 +75,22 @@ def train(args):
 
     checkpoints_dir = os.path.join(workspace, 'checkpoints', filename, 
         model_type, 'loss_type={}'.format(loss_type), 
-        'augmentation={}'.format(augmentation), 'max_note_shift={}'.format(max_note_shift),
-         'batch_size={}'.format(batch_size))
+        'augmentation={}'.format(augmentation), 
+        'max_note_shift={}'.format(max_note_shift),
+        'batch_size={}'.format(batch_size))
     create_folder(checkpoints_dir)
 
     statistics_path = os.path.join(workspace, 'statistics', filename, 
         model_type, 'loss_type={}'.format(loss_type), 
-        'augmentation={}'.format(augmentation), 'max_note_shift={}'.format(max_note_shift), 
+        'augmentation={}'.format(augmentation), 
+        'max_note_shift={}'.format(max_note_shift), 
         'batch_size={}'.format(batch_size), 'statistics.pkl')
     create_folder(os.path.dirname(statistics_path))
 
     logs_dir = os.path.join(workspace, 'logs', filename, 
         model_type, 'loss_type={}'.format(loss_type), 
-        'augmentation={}'.format(augmentation), 'max_note_shift={}'.format(max_note_shift), 
+        'augmentation={}'.format(augmentation), 
+        'max_note_shift={}'.format(max_note_shift), 
         'batch_size={}'.format(batch_size))
     create_folder(logs_dir)
 
@@ -105,10 +108,17 @@ def train(args):
     Model = eval(model_type)
     model = Model(frames_per_second=frames_per_second, classes_num=classes_num)
 
+    if augmentation == 'none':
+        augmentor = None
+    elif augmentation == 'aug':
+        augmentor = Augmentor()
+    else:
+        raise Exception('Incorrect argumentation!')
+    
     # Dataset
     train_dataset = MaestroDataset(hdf5s_dir=hdf5s_dir, 
         segment_seconds=segment_seconds, frames_per_second=frames_per_second, 
-        max_note_shift=max_note_shift)
+        max_note_shift=max_note_shift, augmentor=augmentor)
 
     evaluate_dataset = MaestroDataset(hdf5s_dir=hdf5s_dir, 
         segment_seconds=segment_seconds, frames_per_second=frames_per_second, 
@@ -117,20 +127,20 @@ def train(args):
     # Sampler for training
     train_sampler = Sampler(hdf5s_dir=hdf5s_dir, split='train', 
         segment_seconds=segment_seconds, hop_seconds=hop_seconds, 
-        batch_size=batch_size, training=True, mini_data=mini_data)
+        batch_size=batch_size, mini_data=mini_data)
 
     # Sampler for evaluation
     evaluate_train_sampler = TestSampler(hdf5s_dir=hdf5s_dir, 
         split='train', segment_seconds=segment_seconds, hop_seconds=hop_seconds, 
-        batch_size=batch_size, training=False, mini_data=mini_data)
+        batch_size=batch_size, mini_data=mini_data)
 
     evaluate_validate_sampler = TestSampler(hdf5s_dir=hdf5s_dir, 
         split='validation', segment_seconds=segment_seconds, hop_seconds=hop_seconds, 
-        batch_size=batch_size, training=False, mini_data=mini_data)
+        batch_size=batch_size, mini_data=mini_data)
 
     evaluate_test_sampler = TestSampler(hdf5s_dir=hdf5s_dir, 
         split='test', segment_seconds=segment_seconds, hop_seconds=hop_seconds, 
-        batch_size=batch_size, training=False, mini_data=mini_data)
+        batch_size=batch_size, mini_data=mini_data)
 
     # Dataloader
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset, 
@@ -217,11 +227,10 @@ def train(args):
             train_bgn_time = time.time()
         
         # Save model
-        if iteration % 10000 == 0:
+        if iteration % 20000 == 0:
             checkpoint = {
                 'iteration': iteration, 
                 'model': model.module.state_dict(), 
-                'optimizer': optimizer.state_dict(), 
                 'sampler': train_sampler.state_dict()}
 
             checkpoint_path = os.path.join(
@@ -229,7 +238,7 @@ def train(args):
                 
             torch.save(checkpoint, checkpoint_path)
             logging.info('Model saved to {}'.format(checkpoint_path))
-
+        
         # Reduce learning rate
         if iteration % reduce_iteration == 0 and iteration > 0:
             for param_group in optimizer.param_groups:
@@ -241,6 +250,7 @@ def train(args):
          
         model.train()
         batch_output_dict = model(batch_data_dict['waveform'])
+
         loss = loss_func(model, batch_output_dict, batch_data_dict)
 
         print(iteration, loss)
@@ -267,7 +277,7 @@ if __name__ == '__main__':
     parser_train.add_argument('--workspace', type=str, required=True)
     parser_train.add_argument('--model_type', type=str, required=True)
     parser_train.add_argument('--loss_type', type=str, required=True)
-    parser_train.add_argument('--augmentation', type=str, required=True)
+    parser_train.add_argument('--augmentation', type=str, required=True, choices=['none', 'aug'])
     parser_train.add_argument('--max_note_shift', type=int, required=True)
     parser_train.add_argument('--batch_size', type=int, required=True)
     parser_train.add_argument('--learning_rate', type=float, required=True)
