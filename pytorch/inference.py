@@ -13,15 +13,15 @@ import matplotlib.pyplot as plt
 import torch
  
 from utilities import (create_folder, get_filename, RegressionPostProcessor, 
-    write_events_to_midi)
-from models import *
+    OnsetsFramesPostProcessor, write_events_to_midi)
+from models import Note_pedal
 from pytorch_utils import move_data_to_device, forward
 import config
 
 
 class PianoTranscription(object):
     def __init__(self, model_type, checkpoint_path=None, 
-        segment_samples=16000*10, device='cuda'):
+        segment_samples=16000*10, device='cuda', post_processor_type='regression'):
         """Class for transcribing piano solo recording.
 
         Args:
@@ -37,6 +37,7 @@ class PianoTranscription(object):
             self.device = 'cpu'
 
         self.segment_samples = segment_samples
+        self.post_processor_type = post_processor_type
         self.frames_per_second = config.frames_per_second
         self.classes_num = config.classes_num
         self.onset_threshold = 0.3
@@ -54,11 +55,12 @@ class PianoTranscription(object):
         self.model.load_state_dict(checkpoint['model'], strict=False)
 
         # Parallel
-        print('GPU number: {}'.format(torch.cuda.device_count()))
-
-        if 'cuda' in str(device):
+        if 'cuda' in str(self.device):
+            self.model.to(self.device)
+            print('GPU number: {}'.format(torch.cuda.device_count()))
             self.model = torch.nn.DataParallel(self.model)
-            self.model.to(device)
+        else:
+            print('Using CPU.')
 
     def transcribe(self, audio, midi_path):
         """Transcribe an audio recording.
@@ -68,20 +70,18 @@ class PianoTranscription(object):
           midi_path: str, path to write out the transcribed MIDI.
 
         Returns:
-          transcribed_dict, dict: {'output_dict':, ..., 'est_note_events': ...}
-
+          transcribed_dict, dict: {'output_dict':, ..., 'est_note_events': ..., 
+            'est_pedal_events': ...}
         """
+
         audio = audio[None, :]  # (1, audio_samples)
 
         # Pad audio to be evenly divided by segment_samples
         audio_len = audio.shape[1]
-        pad_len = int(np.ceil(audio_len / self.segment_samples))\
+        pad_len = int(np.ceil(audio_len / self.segment_samples)) \
             * self.segment_samples - audio_len
 
         audio = np.concatenate((audio, np.zeros((1, pad_len))), axis=1)
-
-        # Move data to GPU
-        # audio = move_data_to_device(audio, self.device)
 
         # Enframe to segments
         segments = self.enframe(audio, self.segment_samples)
@@ -95,17 +95,28 @@ class PianoTranscription(object):
         for key in output_dict.keys():
             output_dict[key] = self.deframe(output_dict[key])[0 : audio_len]
         """output_dict: {
-          'reg_onset_output': (N, segment_frames, classes_num), 
-          'reg_offset_output': (N, segment_frames, classes_num), 
-          'frame_output': (N, segment_frames, classes_num), 
-          'velocity_output': (N, segment_frames, classes_num)}"""
+          'reg_onset_output': (segment_frames, classes_num), 
+          'reg_offset_output': (segment_frames, classes_num), 
+          'frame_output': (segment_frames, classes_num), 
+          'velocity_output': (segment_frames, classes_num), 
+          'reg_pedal_onset_output': (segment_frames, 1), 
+          'reg_pedal_offset_output': (segment_frames, 1), 
+          'pedal_frame_output': (segment_frames, 1)}"""
 
         # Post processor
-        post_processor = RegressionPostProcessor(self.frames_per_second, 
-            classes_num=self.classes_num, onset_threshold=self.onset_threshold, 
-            offset_threshold=self.offset_threshod, 
-            frame_threshold=self.frame_threshold, 
-            pedal_offset_threshold=self.pedal_offset_threshold)
+        if self.post_processor_type == 'regression':
+            """Proposed high-resolution regression post processing algorithm."""
+            post_processor = RegressionPostProcessor(self.frames_per_second, 
+                classes_num=self.classes_num, onset_threshold=self.onset_threshold, 
+                offset_threshold=self.offset_threshod, 
+                frame_threshold=self.frame_threshold, 
+                pedal_offset_threshold=self.pedal_offset_threshold)
+
+        elif self.post_processor_type == 'onsets_frames':
+            """Google's onsets and frames post processing algorithm. Only used 
+            for comparison."""
+            post_processor = OnsetsFramesPostProcessor(self.frames_per_second, 
+                self.classes_num)
 
         # Post process output_dict to MIDI events
         (est_note_events, est_pedal_events) = \
@@ -178,7 +189,10 @@ def inference(args):
 
     Args:
       model_type: str
-      checkpoitn_path: str
+      checkpoint_path: str
+      post_processor_type: 'regression' | 'onsets_frames'. High-resolution 
+        system should use 'regression'. 'onsets_frames' is only used to compare
+        with Googl's onsets and frames system.
       audio_path: str
       cuda: bool
     """
@@ -186,6 +200,7 @@ def inference(args):
     # Arugments & parameters
     model_type = args.model_type
     checkpoint_path = args.checkpoint_path
+    post_processor_type = args.post_processor_type
     device = torch.device('cuda') if args.cuda and torch.cuda.is_available() else torch.device('cpu')
     audio_path = args.audio_path
     
@@ -202,14 +217,16 @@ def inference(args):
 
     # Transcriptor
     transcriptor = PianoTranscription(model_type, device=device, 
-        checkpoint_path=checkpoint_path, segment_samples=segment_samples)
+        checkpoint_path=checkpoint_path, segment_samples=segment_samples, 
+        post_processor_type=post_processor_type)
 
     # Transcribe and write out to MIDI file
     transcribe_time = time.time()
     transcribed_dict = transcriptor.transcribe(audio, midi_path)
     print('Transcribe time: {:.3f} s'.format(time.time() - transcribe_time))
 
-    plot = False
+    # Visualize for debug
+    plot = True
     if plot:
         output_dict = transcribed_dict['output_dict']
         fig, axs = plt.subplots(5, 1, figsize=(15, 8), sharex=True)
@@ -227,10 +244,9 @@ def inference(args):
         axs[3].set_title('reg_offset_output')
         axs[4].set_title('pedal_frame_output')
         plt.tight_layout(0, .05, 0)
-        fig_path = 'results/{}.pdf'.format(get_filename(audio_path))
+        fig_path = '_zz.pdf'.format(get_filename(audio_path))
         plt.savefig(fig_path)
         print('Plot to {}'.format(fig_path))
-
     
 
 if __name__ == '__main__':
@@ -238,6 +254,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--model_type', type=str, required=True)
     parser.add_argument('--checkpoint_path', type=str, required=True)
+    parser.add_argument('--post_processor_type', type=str, default='regression', choices=['onsets_frames', 'regression'])
     parser.add_argument('--audio_path', type=str, required=True)
     parser.add_argument('--cuda', action='store_true', default=False)
 
