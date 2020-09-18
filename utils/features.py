@@ -73,13 +73,12 @@ def pack_maestro_dataset_to_hdf5(args):
             hf.create_dataset(name='midi_event_time', data=midi_dict['midi_event_time'], dtype=np.float32)
             hf.create_dataset(name='waveform', data=float32_to_int16(audio), dtype=np.int16)
         
-
     logging.info('Write hdf5 to {}'.format(packed_hdf5_path))
     logging.info('Time: {:.3f} s'.format(time.time() - feature_time))
 
 
 def pack_maps_dataset_to_hdf5(args):
-    """MAPS is a piano dataset only used for validating our piano transcription
+    """MAPS is a piano dataset only used for evaluating our piano transcription
     system (optional). Ref:
 
     [1] Emiya, Valentin. "MAPS Database A piano database for multipitch 
@@ -100,7 +99,7 @@ def pack_maps_dataset_to_hdf5(args):
     pianos = ['ENSTDkCl', 'ENSTDkAm']
 
     # Paths
-    waveform_hdf5s_dir = os.path.join(workspace, 'features_maps')
+    waveform_hdf5s_dir = os.path.join(workspace, 'hdf5s', 'maps')
 
     logs_dir = os.path.join(workspace, 'logs', get_filename(__file__))
     create_logging(logs_dir, filemode='w')
