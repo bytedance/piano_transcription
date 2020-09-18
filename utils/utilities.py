@@ -822,7 +822,7 @@ class RegressionPostProcessor(object):
             output_dict['pedal_offset_output'] = pedal_offset_output  # Values are 0 or 1
             output_dict['pedal_offset_shift_output'] = pedal_offset_shift_output
 
-        # ------ 2. 
+        # ------ 2. Process matrices results to event results ------
         # Detect piano notes from output_dict
         est_on_off_note_vels = self.output_dict_to_detected_notes(output_dict)
 
@@ -833,8 +833,6 @@ class RegressionPostProcessor(object):
         else:
             est_pedal_on_offs = None    
 
-        import crash
-        asdf
         return est_on_off_note_vels, est_pedal_on_offs
 
     def get_binarized_output_from_regression(self, reg_output, threshold, neighbour):
