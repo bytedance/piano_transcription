@@ -89,13 +89,13 @@ class SegmentEvaluator(object):
                 output_dict['reg_pedal_onset_output'].flatten(), 
                 mask=None)
 
-        if 'reg_pedal_offset_roll' in output_dict.keys():
+        if 'reg_pedal_offset_output' in output_dict.keys():
             statistics['reg_pedal_offset_mae'] = mae(
                 output_dict['reg_pedal_offset_output'].flatten(), 
                 output_dict['reg_pedal_offset_roll'].flatten(), 
                 mask=None)
 
-        if 'pedal_frame_roll' in output_dict.keys():
+        if 'pedal_frame_output' in output_dict.keys():
             statistics['pedal_frame_mae'] = mae(
                 output_dict['pedal_frame_output'].flatten(), 
                 output_dict['pedal_frame_roll'].flatten(), 
