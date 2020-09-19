@@ -15,7 +15,7 @@ pip install -r requirements.txt
 ```
 
 ## Piano transcription using pretrained model
-Users can transcribe their favorite piano recordings using pretrained model without training. The easiest way is to install the piano_transcription_inference package: https://github.com/qiuqiangkong/piano_transcription_inference, which is an inference wrapper of this repo: 
+The easiest way is to transcribe a piano recording is to install the piano_transcription_inference package: https://github.com/qiuqiangkong/piano_transcription_inference with pip as follows, which is an inference wrapper of this repo: 
 
 ```
 pip install piano_transcription_inference
