@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import torch
  
 from utilities import (create_folder, get_filename, RegressionPostProcessor, 
-    OnsetsFramesPostProcessor, write_events_to_midi)
+    OnsetsFramesPostProcessor, write_events_to_midi, load_audio)
 from models import Note_pedal
 from pytorch_utils import move_data_to_device, forward
 import config
@@ -21,7 +21,8 @@ import config
 
 class PianoTranscription(object):
     def __init__(self, model_type, checkpoint_path=None, 
-        segment_samples=16000*10, device='cuda', post_processor_type='regression'):
+        segment_samples=16000*10, device=torch.device('cuda'), 
+        post_processor_type='regression'):
         """Class for transcribing piano solo recording.
 
         Args:
@@ -31,7 +32,7 @@ class PianoTranscription(object):
           device: 'cuda' | 'cpu'
         """
 
-        if device == 'cuda' and torch.cuda.is_available():
+        if 'cuda' in str(device) and torch.cuda.is_available():
             self.device = 'cuda'
         else:
             self.device = 'cpu'
@@ -201,7 +202,7 @@ def inference(args):
     model_type = args.model_type
     checkpoint_path = args.checkpoint_path
     post_processor_type = args.post_processor_type
-    device = torch.device('cuda') if args.cuda and torch.cuda.is_available() else torch.device('cpu')
+    device = 'cuda' if args.cuda and torch.cuda.is_available() else 'cpu'
     audio_path = args.audio_path
     
     sample_rate = config.sample_rate
@@ -213,7 +214,7 @@ def inference(args):
     create_folder(os.path.dirname(midi_path))
  
     # Load audio
-    (audio, _) = librosa.core.load(audio_path, sr=sample_rate, mono=True)
+    (audio, _) = load_audio(audio_path, sr=sample_rate, mono=True)
 
     # Transcriptor
     transcriptor = PianoTranscription(model_type, device=device, 
@@ -226,7 +227,7 @@ def inference(args):
     print('Transcribe time: {:.3f} s'.format(time.time() - transcribe_time))
 
     # Visualize for debug
-    plot = True
+    plot = False
     if plot:
         output_dict = transcribed_dict['output_dict']
         fig, axs = plt.subplots(5, 1, figsize=(15, 8), sharex=True)

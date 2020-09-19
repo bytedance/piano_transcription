@@ -15,13 +15,25 @@ pip install -r requirements.txt
 ```
 
 ## Piano transcription using pretrained model
-Users can transcribe their favorite piano recordings using pretrained model without training. First, download the pretrained model from https://zenodo.org/record/4034264. Then, execute the following commands to transcribe this [audio](resources/liszt.mp3).
+Users can transcribe their favorite piano recordings using pretrained model without training. The easiest way is to install the piano_transcription_inference package: https://github.com/qiuqiangkong/piano_transcription_inference, which is an inference wrapper of this repo: 
 
 ```
-CHECKPOINT_PATH="CRNN_note_F1=0.9677_pedal_F1=0.9186.pth"
-wget -O $CHECKPOINT_PATH "https://zenodo.org/record/4034264/files/CRNN_note_F1%3D0.9677_pedal_F1%3D0.9186.pth?download=1"
-MODEL_TYPE="Note_pedal"
-python3 pytorch/inference.py --model_type=$MODEL_TYPE --checkpoint_path=$CHECKPOINT_PATH --audio_path='resources/cut_liszt.mp3' --cuda
+pip install piano_transcription_inference
+```
+
+Then, execute the following commands to transcribe this [audio](resources/liszt.mp3).
+
+```
+from piano_transcription_inference import PianoTranscription, sample_rate, load_audio
+
+# Load audio
+(audio, _) = load_audio(resources/liszt.mp3, sr=sample_rate, mono=True)
+
+# Transcriptor
+transcriptor = PianoTranscription(device='cuda')    # 'cuda' | 'cpu'
+
+# Transcribe and write out to MIDI file
+transcribed_dict = transcriptor.transcribe(audio, 'cut_liszt.mid')
 ```
 
 ## Train a piano transcription system from scratch
@@ -116,13 +128,16 @@ Model saved to .../workspaces/piano_transcription/checkpoints/main/Regress_onset
 
 ## Visualization of piano transcription
 
-**Demo 1.** Andras Schiff: J.S.Bach - French Suites [[audio]](resources/cut_bach.mp3) [[transcribed_midi]](resources/cut_bach.mid)
+**Demo 1.** Lang Lang: Franz Liszt - Love Dream (Liebestraum) [[audio]](resources/cut_liszt.mp3) [[transcribed_midi]](resources/cut_liszt.mid)
+
+<img src="resources/cut_liszt.png">
+
+**Demo 2.** Andras Schiff: J.S.Bach - French Suites [[audio]](resources/cut_bach.mp3) [[transcribed_midi]](resources/cut_bach.mid)
 
 <img src="resources/cut_bach.png">
 
-**Demo 2.** Lang Lang: Franz Liszt - Love Dream (Liebestraum) [[audio]](resources/cut_liszt.mp3) [[transcribed_midi]](resources/cut_liszt.mid)
-
-<img src="resources/cut_liszt.png">
+## Warnings
+On MACs, it is better to use WAV files as input, because the length of MP3 files being loaded with FFMPEG or Mac backend can be different.
 
 
 ## Applications
