@@ -149,4 +149,4 @@ We have built a large-scale classical piano MIDI dataset using our piano transcr
 Qiuqiang Kong, kongqiuqiang@bytedance.com
 
 ## Cite
-[1] Qiuqiang Kong, Bochen Li, Xuchen Song, Yuan Wan, Yuxuan Wang., High-resolution Piano Transcription with Pedals by Regressing Onsets and Offsets Times_v0.1, [[pdf](paper/High-resolution\ Piano\ Transcription\ with\ Pedals\ by\ Regressing\ Precise\ Onsets\ and\ Offsets\ Times_v0.2.pdf)] 2020.
+[1] Qiuqiang Kong, Bochen Li, Xuchen Song, Yuan Wan, Yuxuan Wang., High-resolution Piano Transcription with Pedals by Regressing Onsets and Offsets Times_v0.1, [[pdf](paper/High-resolution%20Piano%20Transcription%20with%20Pedals%20by%20Regressing%20Precise%20Onsets%20and%20Offsets%20Times_v0.2.pdf)] 2020.
