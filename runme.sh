@@ -24,7 +24,7 @@ python3 pytorch/main.py train --workspace=$WORKSPACE --model_type='Regress_onset
 python3 pytorch/main.py train --workspace=$WORKSPACE --model_type='Regress_pedal_CRNN' --loss_type='regress_pedal_bce' --augmentation='none' --max_note_shift=0 --batch_size=12 --learning_rate=5e-4 --reduce_iteration=10000 --resume_iteration=0 --early_stop=300000 --cuda
 
 # --- 3. Combine the note and pedal models ---
-# Users should rename the following paths to their trained model paths
+# Users should copy and rename the following paths to their trained model paths
 NOTE_CHECKPOINT_PATH="Regress_onset_offset_frame_velocity_CRNN_onset_F1=0.9677.pth"
 PEDAL_CHECKPOINT_PATH="Regress_pedal_CRNN_onset_F1=0.9186.pth"
 NOTE_PEDAL_CHECKPOINT_PATH="CRNN_note_F1=0.9677_pedal_F1=0.9186.pth"
