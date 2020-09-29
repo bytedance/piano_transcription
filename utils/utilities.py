@@ -1373,9 +1373,8 @@ class StatisticsContainer(object):
 def load_audio(path, sr=22050, mono=True, offset=0.0, duration=None,
     dtype=np.float32, res_type='kaiser_best', 
     backends=[audioread.ffdec.FFmpegAudioFile]):
-    """Load audio. The only difference with librosa.core.load() is that, ffmpeg
-    backend is always used in this function. While librosa.core.load() use Macca
-    backend as default on MACs"""
+    """Load audio. Copied from librosa.core.load() except that ffmpeg backend is 
+    always used in this function."""
 
     y = []
     with audioread.audio_open(os.path.realpath(path), backends=backends) as input_file:
@@ -1423,7 +1422,7 @@ def load_audio(path, sr=22050, mono=True, offset=0.0, duration=None,
         if n_channels > 1:
             y = y.reshape((-1, n_channels)).T
             if mono:
-                y = to_mono(y)
+                y = librosa.core.audio.to_mono(y)
 
         if sr is not None:
             y = librosa.core.audio.resample(y, sr_native, sr, res_type=res_type)
