@@ -15,19 +15,19 @@ pip install -r requirements.txt
 ```
 
 ## Piano transcription using pretrained model
-The easiest way is to transcribe a piano recording is to install the piano_transcription_inference package: https://github.com/qiuqiangkong/piano_transcription_inference with pip as follows, which is an inference wrapper of this repo: 
+The easiest way is to transcribe a new piano recording is to install the piano_transcription_inference package: https://github.com/qiuqiangkong/piano_transcription_inference with pip as follows: 
 
 ```
 pip install piano_transcription_inference
 ```
 
-Then, execute the following commands to transcribe this [audio](resources/liszt.mp3).
+Then, execute the following commands to transcribe this [audio](resources/cut_liszt.mp3).
 
 ```
 from piano_transcription_inference import PianoTranscription, sample_rate, load_audio
 
 # Load audio
-(audio, _) = load_audio(resources/liszt.mp3, sr=sample_rate, mono=True)
+(audio, _) = load_audio('resources/cut_liszt.mp3', sr=sample_rate, mono=True)
 
 # Transcriptor
 transcriptor = PianoTranscription(device='cuda')    # 'cuda' | 'cpu'
@@ -90,8 +90,10 @@ Execute the commands line by line in runme.sh, including:
 2) Pack audio recordings to hdf5 files.
 3) Train piano note transcription system.
 4) Train piano pedal transcription system.
-4) Combine piano note and piano pedal transcription systems.
-4) Evaluate.
+5) Combine piano note and piano pedal transcription systems.
+6) Evaluate.
+
+All training steps are described in runme.sh. It worth looking into runme.sh to see how the piano transcription system is trained. In total 29 GB GPU memoroy is required with a batch size of 12. Users may consider to reduce the batch size, or use multiple GPU cards to train this system.
 
 ## Results
 The training uses a single Tesla-V100-PCIE-32GB card. The system is trained for 300k iterations for one week. The training looks like:
@@ -136,8 +138,8 @@ Model saved to .../workspaces/piano_transcription/checkpoints/main/Regress_onset
 
 <img src="resources/cut_bach.png">
 
-## Warnings
-On MACs, it is better to use WAV files as input, because the length of MP3 files being loaded with FFMPEG or Mac backend can be different.
+## FAQs
+
 
 
 ## Applications
@@ -147,4 +149,4 @@ We have built a large-scale classical piano MIDI dataset using our piano transcr
 Qiuqiang Kong, kongqiuqiang@bytedance.com
 
 ## Cite
-[1] Qiuqiang Kong, Bochen Li, Xuchen Song, Yuan Wan, Yuxuan Wang., High-resolution Piano Transcription with Pedals by Regressing Onsets and Offsets Times_v0.1, [To appear] 2020.
+[1] Qiuqiang Kong, Bochen Li, Xuchen Song, Yuan Wan, Yuxuan Wang., High-resolution Piano Transcription with Pedals by Regressing Onsets and Offsets Times_v0.1, [[pdf](paper/High-resolution\ Piano\ Transcription\ with\ Pedals\ by\ Regressing\ Precise\ Onsets\ and\ Offsets\ Times_v0.2.pdf)] 2020.
