@@ -1,6 +1,9 @@
-torch==1.0.1.post2
-librosa==0.6.3
+h5py==2.10.0
+pandas==1.1.2
+librosa==0.6.0
+numba==0.48
 mido==1.2.9
 mir_eval==0.5
 matplotlib==3.0.3
 torchlibrosa==0.0.4
+sox==1.4.0
