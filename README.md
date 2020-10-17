@@ -139,11 +139,13 @@ Model saved to .../workspaces/piano_transcription/checkpoints/main/Regress_onset
 <img src="resources/cut_bach.png">
 
 ## FAQs
-
-
+If users met running out of GPU memory error, then try to reduce batch size.
 
 ## Applications
 We have built a large-scale classical piano MIDI dataset using our piano transcription system. See https://github.com/bytedance/GiantMIDI-Piano for details.
+
+## LICENSE
+Apache 2.0
 
 ## Contact
 Qiuqiang Kong, kongqiuqiang@bytedance.com
