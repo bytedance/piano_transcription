@@ -127,7 +127,6 @@ Train time: 8953.815 s, validate time: 93.683 s
 Model saved to .../workspaces/piano_transcription/checkpoints/main/Regress_onset_offset_frame_velocity_CRNN/loss_type=regress_onset_offset_frame_velocity_bce/augmentation=none/batch_size=12/300000_iterations.pth
 </pre>
 
-
 ## Visualization of piano transcription
 
 **Demo 1.** Lang Lang: Franz Liszt - Love Dream (Liebestraum) [[audio]](resources/cut_liszt.mp3) [[transcribed_midi]](resources/cut_liszt.mid)
