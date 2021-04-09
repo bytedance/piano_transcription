@@ -45,7 +45,7 @@ def pack_maestro_dataset_to_hdf5(args):
 
     # Load & resample each audio file to a hdf5 file
     for n in range(audios_num):
-        logging.info('{} {}'.format(n, meta_dict['midi_filename'][n]))
+
 
         # Read midi
         midi_path = os.path.join(dataset_dir, meta_dict['midi_filename'][n])
@@ -53,7 +53,7 @@ def pack_maestro_dataset_to_hdf5(args):
           print("NOT FOUND FILE")
           continue
         midi_dict = read_midi(midi_path)
-
+        logging.info('{} {}'.format(n, meta_dict['midi_filename'][n]))
         # Load audio
         audio_path = os.path.join(dataset_dir, meta_dict['audio_filename'][n])
         (audio, _) = librosa.core.load(audio_path, sr=sample_rate, mono=True)

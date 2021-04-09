@@ -105,7 +105,7 @@ class MaestroDataset(object):
             # Process MIDI events to target
             (target_dict, note_events, pedal_events) = \
                 self.target_processor.process(start_time, midi_events_time, 
-                    midi_events, extend_pedal=True, note_shift=note_shift)
+                    midi_events, extend_pedal=False, note_shift=note_shift)
 
         # Combine input and target
         for key in target_dict.keys():
