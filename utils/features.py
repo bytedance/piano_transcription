@@ -49,6 +49,9 @@ def pack_maestro_dataset_to_hdf5(args):
 
         # Read midi
         midi_path = os.path.join(dataset_dir, meta_dict['midi_filename'][n])
+        if not os.path.isfile(midi_path):
+          print("NOT FOUND FILE")
+          continue
         midi_dict = read_midi(midi_path)
 
         # Load audio

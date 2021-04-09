@@ -181,10 +181,12 @@ def train(args):
         model.load_state_dict(checkpoint['model'])
         train_sampler.load_state_dict(checkpoint['sampler'])
         statistics_container.load_state_dict(resume_iteration)
-        iteration = checkpoint['iteration']
+       iterationLoad = checkpoint['iteration']
 
     else:
-        iteration = 0
+        iterationLoad = 0
+
+    print("iterationLoad", iterationLoad)
     
     # Parallel
     print('GPU number: {}'.format(torch.cuda.device_count()))
@@ -194,78 +196,86 @@ def train(args):
         model.to(device)
 
     train_bgn_time = time.time()
+    num_epochs = 4
 
-    for batch_data_dict in train_loader:
+    for epoch in range(num_epochs):
+
+        for iteration, batch_data_dict in enumerate(train_loader):
+
+            if iterationLoad != 0 and iteration < iterationLoad:
+                continue
         
-        # Evaluation 
-        if iteration % 5000 == 0:# and iteration > 0:
-            logging.info('------------------------------------')
-            logging.info('Iteration: {}'.format(iteration))
+            # Evaluation 
+            if iteration % 5000 == 0:# and iteration > 0:
+                logging.info('------------------------------------')
+                logging.info('Iteration: {}'.format(iteration))
 
-            train_fin_time = time.time()
+                train_fin_time = time.time()
 
-            evaluate_train_statistics = evaluator.evaluate(evaluate_train_loader)
-            validate_statistics = evaluator.evaluate(validate_loader)
-            test_statistics = evaluator.evaluate(test_loader)
+                evaluate_train_statistics = evaluator.evaluate(evaluate_train_loader)
+                validate_statistics = evaluator.evaluate(validate_loader)
+                test_statistics = evaluator.evaluate(test_loader)
 
-            logging.info('    Train statistics: {}'.format(evaluate_train_statistics))
-            logging.info('    Validation statistics: {}'.format(validate_statistics))
-            logging.info('    Test statistics: {}'.format(test_statistics))
+                logging.info('    Train statistics: {}'.format(evaluate_train_statistics))
+                logging.info('    Validation statistics: {}'.format(validate_statistics))
+                logging.info('    Test statistics: {}'.format(test_statistics))
 
-            statistics_container.append(iteration, evaluate_train_statistics, data_type='train')
-            statistics_container.append(iteration, validate_statistics, data_type='validation')
-            statistics_container.append(iteration, test_statistics, data_type='test')
-            statistics_container.dump()
+                statistics_container.append(iteration, evaluate_train_statistics, data_type='train')
+                statistics_container.append(iteration, validate_statistics, data_type='validation')
+                statistics_container.append(iteration, test_statistics, data_type='test')
+                statistics_container.dump()
 
-            train_time = train_fin_time - train_bgn_time
-            validate_time = time.time() - train_fin_time
+                train_time = train_fin_time - train_bgn_time
+                validate_time = time.time() - train_fin_time
 
-            logging.info(
-                'Train time: {:.3f} s, validate time: {:.3f} s'
-                ''.format(train_time, validate_time))
+                logging.info(
+                    'Train time: {:.3f} s, validate time: {:.3f} s'
+                    ''.format(train_time, validate_time))
 
-            train_bgn_time = time.time()
-        
-        # Save model
-        if iteration % 20000 == 0:
-            checkpoint = {
-                'iteration': iteration, 
-                'model': model.module.state_dict(), 
-                'sampler': train_sampler.state_dict()}
+                train_bgn_time = time.time()
+            
+            # Save model
+            if iteration % 10000 == 0:
+                checkpoint = {
+                    'iteration': iteration, 
+                    'model': model.module.state_dict(), 
+                    'sampler': train_sampler.state_dict()}
 
-            checkpoint_path = os.path.join(
-                checkpoints_dir, '{}_iterations.pth'.format(iteration))
-                
-            torch.save(checkpoint, checkpoint_path)
-            logging.info('Model saved to {}'.format(checkpoint_path))
-        
-        # Reduce learning rate
-        if iteration % reduce_iteration == 0 and iteration > 0:
-            for param_group in optimizer.param_groups:
-                param_group['lr'] *= 0.9
-        
-        # Move data to device
-        for key in batch_data_dict.keys():
-            batch_data_dict[key] = move_data_to_device(batch_data_dict[key], device)
-         
-        model.train()
-        batch_output_dict = model(batch_data_dict['waveform'])
+                checkpoint_path = os.path.join(
+                    checkpoints_dir, '{}_iterations.pth'.format(iteration))
+                    
+                torch.save(checkpoint, checkpoint_path)
+                logging.info('Model saved to {}'.format(checkpoint_path))
+            
+            # # Reduce learning rate
+            # if iteration % reduce_iteration == 0 and iteration > 0:
+            #     for param_group in optimizer.param_groups:
+            #         param_group['lr'] *= 0.9
+            
+            # Move data to device
+            for key in batch_data_dict.keys():
+                batch_data_dict[key] = move_data_to_device(batch_data_dict[key], device)
+            
+            model.train()
+            batch_output_dict = model(batch_data_dict['waveform'])
 
-        loss = loss_func(model, batch_output_dict, batch_data_dict)
+            loss = loss_func(model, batch_output_dict, batch_data_dict)
 
-        print(iteration, loss)
+            # Backward
+            loss.backward()
+            
+            if iteration % 100 == 0:
+              print(loss, iteration, "LOSS")
+            
+            if iteration % 2 != 0:
+                optimizer.step()
+                optimizer.zero_grad()
+            
+            # Stop learning
+            if iteration == early_stop:
+                break
 
-        # Backward
-        loss.backward()
-        
-        optimizer.step()
-        optimizer.zero_grad()
-        
-        # Stop learning
-        if iteration == early_stop:
-            break
-
-        iteration += 1
+            iteration += 1
 
 
 if __name__ == '__main__':

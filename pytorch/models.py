@@ -190,9 +190,9 @@ class Regress_onset_offset_frame_velocity_CRNN(nn.Module):
         self.frame_model = AcousticModelCRnn8Dropout(classes_num, midfeat, momentum)
         self.reg_onset_model = AcousticModelCRnn8Dropout(classes_num, midfeat, momentum)
         self.reg_offset_model = AcousticModelCRnn8Dropout(classes_num, midfeat, momentum)
-        self.velocity_model = AcousticModelCRnn8Dropout(classes_num, midfeat, momentum)
+        # self.velocity_model = AcousticModelCRnn8Dropout(classes_num, midfeat, momentum)
 
-        self.reg_onset_gru = nn.GRU(input_size=88 * 2, hidden_size=256, num_layers=1, 
+        self.reg_onset_gru = nn.GRU(input_size=88, hidden_size=256, num_layers=1, 
             bias=True, batch_first=True, dropout=0., bidirectional=True)
         self.reg_onset_fc = nn.Linear(512, classes_num, bias=True)
 
@@ -233,10 +233,10 @@ class Regress_onset_offset_frame_velocity_CRNN(nn.Module):
         frame_output = self.frame_model(x)  # (batch_size, time_steps, classes_num)
         reg_onset_output = self.reg_onset_model(x)  # (batch_size, time_steps, classes_num)
         reg_offset_output = self.reg_offset_model(x)    # (batch_size, time_steps, classes_num)
-        velocity_output = self.velocity_model(x)    # (batch_size, time_steps, classes_num)
+        # velocity_output = self.velocity_model(x)    # (batch_size, time_steps, classes_num)
  
         # Use velocities to condition onset regression
-        x = torch.cat((reg_onset_output, (reg_onset_output ** 0.5) * velocity_output.detach()), dim=2)
+        # x = torch.cat((reg_onset_output, (reg_onset_output ** 0.5) * velocity_output.detach()), dim=2)
         (x, _) = self.reg_onset_gru(x)
         x = F.dropout(x, p=0.5, training=self.training, inplace=False)
         reg_onset_output = torch.sigmoid(self.reg_onset_fc(x))
@@ -253,7 +253,8 @@ class Regress_onset_offset_frame_velocity_CRNN(nn.Module):
             'reg_onset_output': reg_onset_output, 
             'reg_offset_output': reg_offset_output, 
             'frame_output': frame_output, 
-            'velocity_output': velocity_output}
+            # 'velocity_output': velocity_output
+            }
 
         return output_dict
 
