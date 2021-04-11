@@ -192,7 +192,7 @@ def train(args):
     if resume_iteration > 0:
         resume_checkpoint_path = os.path.join(workspace, 'checkpoints', filename, 
             model_type, 'loss_type={}'.format(loss_type), 
-            'augmentation={}'.format(augmentation), 'batch_size={}'.format(batch_size), 
+            'augmentation={}'.format(augmentation),'max_note_shift=0', 'batch_size={}'.format(batch_size), 
                 '{}_iterations.pth'.format(resume_iteration))
 
         logging.info('Loading checkpoint {}'.format(resume_checkpoint_path))
@@ -200,12 +200,12 @@ def train(args):
         model.load_state_dict(checkpoint['model'])
         train_sampler.load_state_dict(checkpoint['sampler'])
         statistics_container.load_state_dict(resume_iteration)
-       iteration = checkpoint['iteration']
+        iteration = checkpoint['iteration']
 
     else:
         iteration = 0
 
-    print("iterationLoad", iterationLoad)
+    # print("iterationLoad", iterationLoad)
     
     # Parallel
     print('GPU number: {}'.format(torch.cuda.device_count()))
@@ -256,7 +256,7 @@ def train(args):
             train_reg_offset.append(evaluate_train_statistics['reg_offset_mae'])
         
         # Save model
-        if iteration % 10000 == 0:
+        if iteration % 1000 == 0:
             checkpoint = {
                 'iteration': iteration, 
                 'model': model.module.state_dict(), 
@@ -317,8 +317,8 @@ def train(args):
             axs[6].set_yscale('log')
             axs[6].set_xlabel("train_reg_offset")  
             
-            plt.savefig('/local/CPSC532s_Results/Attention_Gru/Attention_Gru.png')
-            fileData = open("/local/CPSC532s_Results/Attention_Gru/AttentionGru.txt","a+") 
+            plt.savefig('/content/drive/MyDrive/532Project/MelTraining/workspaceOrigMel/Attention_Gru.png')
+            fileData = open("/content/drive/MyDrive/532Project/MelTraining/workspaceOrigMel/AttentionGru.txt","a+") 
             fileData.writelines([str(loss.item()), " ", str(iteration)])
             fileData.write("\n")
             fileData.close()

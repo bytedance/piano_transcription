@@ -158,7 +158,7 @@ class Regress_onset_offset_frame_velocity_CRNN(nn.Module):
     def __init__(self, frames_per_second, classes_num):
         super(Regress_onset_offset_frame_velocity_CRNN, self).__init__()
 
-        sample_rate = 16000
+        sample_rate = 44100
         window_size = 2048
         hop_size = sample_rate // frames_per_second
         mel_bins = 229
@@ -230,6 +230,8 @@ class Regress_onset_offset_frame_velocity_CRNN(nn.Module):
         x = self.bn0(x)
         x = x.transpose(1, 3)
 
+        # print("x", x.shape)
+
         frame_output = self.frame_model(x)  # (batch_size, time_steps, classes_num)
         reg_onset_output = self.reg_onset_model(x)  # (batch_size, time_steps, classes_num)
         reg_offset_output = self.reg_offset_model(x)    # (batch_size, time_steps, classes_num)
@@ -237,7 +239,7 @@ class Regress_onset_offset_frame_velocity_CRNN(nn.Module):
  
         # Use velocities to condition onset regression
         # x = torch.cat((reg_onset_output, (reg_onset_output ** 0.5) * velocity_output.detach()), dim=2)
-        (x, _) = self.reg_onset_gru(x)
+        (x, _) = self.reg_onset_gru(reg_onset_output)
         x = F.dropout(x, p=0.5, training=self.training, inplace=False)
         reg_onset_output = torch.sigmoid(self.reg_onset_fc(x))
         """(batch_size, time_steps, classes_num)"""
