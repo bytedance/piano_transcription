@@ -79,6 +79,23 @@ def pack_maestro_dataset_to_hdf5(args):
     logging.info('Write hdf5 to {}'.format(packed_hdf5_path))
     logging.info('Time: {:.3f} s'.format(time.time() - feature_time))
 
+def read_musicnet_csv(csv_path):
+    with open(csv_path, 'r') as fr:
+        reader = csv.reader(fr, delimiter=',')
+        lines = list(reader)
+        
+        temp = []
+        for n in range(1, len(lines)):
+            temp.append((lines[n][3], lines[n][0] / float(44100)))
+            temp.append((lines[n][3], lines[n][1] / float(44100)))
+
+        temp = sorted(temp, key=lambda x: x[1])
+        events = [item[0] for item in temp]
+        events_time = [item[1] for item in temp]
+
+        return events, events_time
+
+
 
 def pack_maps_dataset_to_hdf5(args):
     """MAPS is a piano dataset only used for evaluating our piano transcription
