@@ -95,7 +95,7 @@ def infer_prob(args):
 
                 ref_on_off_pairs = np.array([[event['onset_time'], event['offset_time']] for event in note_events])
                 ref_midi_notes = np.array([event['midi_note'] for event in note_events])
-                ref_velocity = np.array([event['velocity'] for event in note_events])
+                # ref_velocity = np.array([event['velocity'] for event in note_events])
 
                 # Transcribe
                 transcribed_dict = transcriptor.transcribe(audio, midi_path=None)
@@ -106,7 +106,7 @@ def infer_prob(args):
                 total_dict['frame_roll'] = target_dict['frame_roll']
                 total_dict['ref_on_off_pairs'] = ref_on_off_pairs
                 total_dict['ref_midi_notes'] = ref_midi_notes
-                total_dict['ref_velocity'] = ref_velocity
+                # total_dict['ref_velocity'] = ref_velocity
 
                 if 'pedal_frame_output' in output_dict.keys():
                     total_dict['ref_pedal_on_off_pairs'] = \
@@ -128,13 +128,13 @@ class ScoreCalculator(object):
         self.frames_per_second = config.frames_per_second
         self.classes_num = config.classes_num
         self.velocity_scale = config.velocity_scale
-        self.velocity = True  # True | False
-        self.pedal = True
+        self.velocity = False  # True | False
+        self.pedal = False
 
         self.evaluate_frame = True
-        self.onset_tolerance = 0.05
+        self.onset_tolerance = 0.5
         self.offset_ratio = 0.2  # None | 0.2
-        self.offset_min_tolerance = 0.05
+        self.offset_min_tolerance = 0.5
 
         self.pedal_offset_threshold = 0.2
         self.pedal_offset_ratio = 0.2  # None | 0.2
@@ -241,7 +241,7 @@ class ScoreCalculator(object):
         # # Detect piano notes from output_dict
         est_on_offs = est_on_off_note_vels[:, 0 : 2]
         est_midi_notes = est_on_off_note_vels[:, 2]
-        est_vels = est_on_off_note_vels[:, 3] * self.velocity_scale
+        # est_vels = est_on_off_note_vels[:, 3] * self.velocity_scale
 
         # Calculate note metrics
         if self.velocity:
@@ -267,38 +267,38 @@ class ScoreCalculator(object):
                     offset_ratio=self.offset_ratio, 
                     offset_min_tolerance=self.offset_min_tolerance)
 
-        if self.pedal:
-            # Detect piano notes from output_dict
-            ref_pedal_on_off_pairs = output_dict['ref_pedal_on_off_pairs']
+        # if self.pedal:
+        #     # Detect piano notes from output_dict
+        #     ref_pedal_on_off_pairs = output_dict['ref_pedal_on_off_pairs']
 
-            # Calculate pedal metrics
-            if len(ref_pedal_on_off_pairs) > 0:
-                pedal_precision, pedal_recall, pedal_f1, _ = \
-                    mir_eval.transcription.precision_recall_f1_overlap(
-                        ref_intervals=ref_pedal_on_off_pairs, 
-                        ref_pitches=np.ones(ref_pedal_on_off_pairs.shape[0]), 
-                        est_intervals=est_pedal_on_offs, 
-                        est_pitches=np.ones(est_pedal_on_offs.shape[0]), 
-                        onset_tolerance=0.2, 
-                        offset_ratio=self.pedal_offset_ratio, 
-                        offset_min_tolerance=self.pedal_offset_min_tolerance)
+        #     # Calculate pedal metrics
+        #     if len(ref_pedal_on_off_pairs) > 0:
+        #         pedal_precision, pedal_recall, pedal_f1, _ = \
+        #             mir_eval.transcription.precision_recall_f1_overlap(
+        #                 ref_intervals=ref_pedal_on_off_pairs, 
+        #                 ref_pitches=np.ones(ref_pedal_on_off_pairs.shape[0]), 
+        #                 est_intervals=est_pedal_on_offs, 
+        #                 est_pitches=np.ones(est_pedal_on_offs.shape[0]), 
+        #                 onset_tolerance=0.2, 
+        #                 offset_ratio=self.pedal_offset_ratio, 
+        #                 offset_min_tolerance=self.pedal_offset_min_tolerance)
 
-                return_dict['pedal_precision'] = pedal_precision
-                return_dict['pedal_recall'] = pedal_recall
-                return_dict['pedal_f1'] = pedal_f1
+        #         return_dict['pedal_precision'] = pedal_precision
+        #         return_dict['pedal_recall'] = pedal_recall
+        #         return_dict['pedal_f1'] = pedal_f1
 
-                y_pred = (np.sign(total_dict['pedal_frame_output'] - 0.5) + 1) / 2
-                y_pred[np.where(y_pred==0.5)] = 0
-                y_true = total_dict['pedal_frame_roll']
-                y_pred = y_pred[0 : y_true.shape[0]]
-                y_true = y_true[0 : y_pred.shape[0]]
+        #         y_pred = (np.sign(total_dict['pedal_frame_output'] - 0.5) + 1) / 2
+        #         y_pred[np.where(y_pred==0.5)] = 0
+        #         y_true = total_dict['pedal_frame_roll']
+        #         y_pred = y_pred[0 : y_true.shape[0]]
+        #         y_true = y_true[0 : y_pred.shape[0]]
                 
-                tmp = metrics.precision_recall_fscore_support(y_true.flatten(), y_pred.flatten())
-                return_dict['pedal_frame_precision'] = tmp[0][1]
-                return_dict['pedal_frame_recall'] = tmp[1][1]
-                return_dict['pedal_frame_f1'] = tmp[2][1]
+        #         tmp = metrics.precision_recall_fscore_support(y_true.flatten(), y_pred.flatten())
+        #         return_dict['pedal_frame_precision'] = tmp[0][1]
+        #         return_dict['pedal_frame_recall'] = tmp[1][1]
+        #         return_dict['pedal_frame_f1'] = tmp[2][1]
 
-                print('pedal f1: {:.3f}, frame f1: {:.3f}'.format(pedal_f1, return_dict['pedal_frame_f1']))
+        #         print('pedal f1: {:.3f}, frame f1: {:.3f}'.format(pedal_f1, return_dict['pedal_frame_f1']))
 
         print('note f1: {:.3f}'.format(note_f1))
 
@@ -342,7 +342,7 @@ def calculate_metrics(args, thresholds=None):
     score_calculator = ScoreCalculator(hdf5s_dir, probs_dir, split=split, post_processor_type=post_processor_type)
 
     if not thresholds:
-        thresholds = [0.3, 0.3, 0.3]
+        thresholds = [0.3, 0.3, 0.1]
     else:
         pass
 

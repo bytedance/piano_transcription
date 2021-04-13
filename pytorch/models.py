@@ -344,17 +344,17 @@ class Note_pedal(nn.Module):
         super(Note_pedal, self).__init__()
 
         self.note_model = Regress_onset_offset_frame_velocity_CRNN(frames_per_second, classes_num)
-        self.pedal_model = Regress_pedal_CRNN(frames_per_second, classes_num)
+        # self.pedal_model = Regress_pedal_CRNN(frames_per_second, classes_num)
 
     def load_state_dict(self, m, strict=False):
         self.note_model.load_state_dict(m['note_model'], strict=strict)
-        self.pedal_model.load_state_dict(m['pedal_model'], strict=strict)
+        # self.pedal_model.load_state_dict(m['pedal_model'], strict=strict)
 
     def forward(self, input):
         note_output_dict = self.note_model(input)
-        pedal_output_dict = self.pedal_model(input)
+        # pedal_output_dict = self.pedal_model(input)
 
         full_output_dict = {}
         full_output_dict.update(note_output_dict)
-        full_output_dict.update(pedal_output_dict)
+        # full_output_dict.update(pedal_output_dict)
         return full_output_dict
