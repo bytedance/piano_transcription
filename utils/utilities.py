@@ -364,7 +364,7 @@ class TargetProcessor(object):
         reg_onset_roll = np.ones((frames_num, self.classes_num))
         reg_offset_roll = np.ones((frames_num, self.classes_num))
         frame_roll = np.zeros((frames_num, self.classes_num))
-        velocity_roll = np.zeros((frames_num, self.classes_num))
+        # velocity_roll = np.zeros((frames_num, self.classes_num))
         mask_roll = np.ones((frames_num, self.classes_num))
         """mask_roll is used for masking out cross segment notes"""
 
@@ -390,7 +390,7 @@ class TargetProcessor(object):
                     frame_roll[max(bgn_frame, 0) : fin_frame + 1, piano_note] = 1
 
                     offset_roll[fin_frame, piano_note] = 1
-                    velocity_roll[max(bgn_frame, 0) : fin_frame + 1, piano_note] = note_event['velocity']
+                    # velocity_roll[max(bgn_frame, 0) : fin_frame + 1, piano_note] = note_event['velocity']
 
                     # Vector from the center of a frame to ground truth offset
                     reg_offset_roll[fin_frame, piano_note] = \
@@ -444,7 +444,7 @@ class TargetProcessor(object):
         target_dict = {
             'onset_roll': onset_roll, 'offset_roll': offset_roll,
             'reg_onset_roll': reg_onset_roll, 'reg_offset_roll': reg_offset_roll,
-            'frame_roll': frame_roll, 'velocity_roll': velocity_roll, 
+            'frame_roll': frame_roll, 
             'mask_roll': mask_roll, 'reg_pedal_onset_roll': reg_pedal_onset_roll, 
             'pedal_onset_roll': pedal_onset_roll, 'pedal_offset_roll': pedal_offset_roll, 
             'reg_pedal_offset_roll': reg_pedal_offset_roll, 'pedal_frame_roll': pedal_frame_roll

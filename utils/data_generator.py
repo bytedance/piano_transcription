@@ -186,7 +186,7 @@ class Sampler(object):
             with h5py.File(hdf5_path, 'r') as hf:
                 if hf.attrs['split'].decode() == split:
                     audio_name = hdf5_path.split('/')[-1]
-                    year = hf.attrs['year'].decode()
+                    year = "2004"
                     start_time = 0
                     while (start_time + self.segment_seconds < hf.attrs['duration']):
                         self.segment_list.append([year, audio_name, start_time])
@@ -268,7 +268,7 @@ class TestSampler(object):
             with h5py.File(hdf5_path, 'r') as hf:
                 if hf.attrs['split'].decode() == split:
                     audio_name = hdf5_path.split('/')[-1]
-                    year = hf.attrs['year'].decode()
+                    year = "2004"
                     start_time = 0
                     while (start_time + self.segment_seconds < hf.attrs['duration']):
                         self.segment_list.append([year, audio_name, start_time])
