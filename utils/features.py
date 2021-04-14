@@ -101,13 +101,13 @@ def read_musicnet_csv(csv_path):
         
         temp = []
         for n in range(1, len(lines)):
-            temp.append(("note_on note={}".format(lines[n][3]), lines[n][0] / float(44100)))
-            temp.append(("note_off note={}".format(lines[n][3]), lines[n][1] / float(44100)))
+            temp.append(("note_on note={}".format(lines[n][3]), float(lines[n][0]) / float(44100)))
+            temp.append(("note_off note={}".format(lines[n][3]), float(lines[n][1]) / float(44100)))
 
         temp = sorted(temp, key=lambda x: x[1])
         events = [item[0] for item in temp]
         events_time = [item[1] for item in temp]
-
+        
         return events, events_time #events is midi events, events time midi_event_time
 
 def pack_maps_dataset_to_hdf5(args):
