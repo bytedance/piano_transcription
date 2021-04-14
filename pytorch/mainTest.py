@@ -229,6 +229,10 @@ def train(args):
                 frame_threshold=0.1, 
                 pedal_offset_threshold=0.1)
         print(batch_data_dict.keys())
+        batch_data_dict["onset_output"] = batch_data_dict["onset_roll"]
+        batch_data_dict["onset_output"] = batch_data_dict["onset_roll"]
+        batch_data_dict["reg_onset_output"] = batch_data_dict["reg_onset_roll"]
+        batch_data_dict["reg_offset_output"] = batch_data_dict["reg_offset_roll"]
         (est_note_events, est_pedal_events) = \
             post_processor.output_dict_to_midi_events(batch_data_dict)
         write_events_to_midi(start_time=0, note_events=est_note_events, 
