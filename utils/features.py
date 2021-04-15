@@ -96,26 +96,26 @@ def pack_maestro_dataset_to_hdf5(args):
             hf.attrs.create('duration', data=duration, dtype=np.float32)
         
             logging.info('Write hdf5 to {}'.format(packed_hdf5_path))
-    logging.info('Time: {:.3f} s'.format(time.time() - feature_time))
+    # logging.info('Time: {:.3f} s'.format(time.time() - feature_time))
     
     # FOR THE TEST!!!!!
     for n, test_list in enumerate(listTest):
         print(n, "HIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII !!!!")
-        print(train_list ," jakwez")
+        print(test_list ," jakwez")
         
         # Load audio
-        audio_path = dataset_dir + 'test_data/' + train_list.split('.')[0] + '.wav' 
+        audio_path = dataset_dir + 'test_data/' + test_list.split('.')[0] + '.wav' 
         
         print(audio_path, "helloooo ??? audio path")
         (audio, _) = librosa.core.load(audio_path, sr=sample_rate, mono=True)
 
         packed_hdf5_path = os.path.join(waveform_hdf5s_dir, '{}.h5'.format(
-            os.path.splitext(train_list)[0]))
+            os.path.splitext(test_list)[0]))
 
         create_folder(os.path.dirname(packed_hdf5_path))
         
-        (events, events_time) = read_musicnet_csv(dataset_dir + 'test_labels/' + train_list)
-        duration = read_big_csv(csv_path, train_list.split('.')[0])
+        (events, events_time) = read_musicnet_csv(dataset_dir + 'test_labels/' + test_list)
+        duration = read_big_csv(csv_path, test_list.split('.')[0])
         
         with h5py.File(packed_hdf5_path, 'w') as hf:
 
@@ -126,7 +126,7 @@ def pack_maestro_dataset_to_hdf5(args):
             hf.attrs.create('duration', data=duration, dtype=np.float32)
         
             logging.info('Write hdf5 to {}'.format(packed_hdf5_path))
-    logging.info('Time: {:.3f} s'.format(time.time() - feature_time))
+    # logging.info('Time: {:.3f} s'.format(time.time() - feature_time))
 
 def read_musicnet_csv(csv_path):
     with open(csv_path, 'r') as fr:

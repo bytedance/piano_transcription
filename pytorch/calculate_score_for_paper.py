@@ -15,7 +15,7 @@ from concurrent.futures import ProcessPoolExecutor
  
 from utilities import (create_folder, get_filename, traverse_folder, 
     int16_to_float32, note_to_freq, TargetProcessor, RegressionPostProcessor, 
-    OnsetsFramesPostProcessor)
+    OnsetsFramesPostProcessor, write_events_to_midi)
 import config
 from inference import PianoTranscription
 
@@ -243,6 +243,13 @@ class ScoreCalculator(object):
         est_midi_notes = est_on_off_note_vels[:, 2]
         # est_vels = est_on_off_note_vels[:, 3] * self.velocity_scale
 
+        (est_note_events, est_pedal_events) = \
+          post_processor.output_dict_to_midi_events(output_dict)
+        midi_path = 'results_200/{}.mid'.format(get_filename(hdf5_path))
+        create_folder(os.path.dirname(midi_path))
+        write_events_to_midi(start_time=0, note_events=est_note_events, 
+                pedal_events=est_pedal_events, midi_path=midi_path)
+
         # Calculate note metrics
         if self.velocity:
             (note_precision, note_recall, note_f1, _) = (
@@ -342,7 +349,7 @@ def calculate_metrics(args, thresholds=None):
     score_calculator = ScoreCalculator(hdf5s_dir, probs_dir, split=split, post_processor_type=post_processor_type)
 
     if not thresholds:
-        thresholds = [0.3, 0.3, 0.1]
+        thresholds = [0.1, 0.1, 0.1]
     else:
         pass
 

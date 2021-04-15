@@ -153,9 +153,9 @@ def train(args):
         split='train', segment_seconds=segment_seconds, hop_seconds=hop_seconds, 
         batch_size=batch_size, mini_data=mini_data)
 
-    evaluate_validate_sampler = TestSampler(hdf5s_dir=hdf5s_dir, 
-        split='validation', segment_seconds=segment_seconds, hop_seconds=hop_seconds, 
-        batch_size=batch_size, mini_data=mini_data)
+    # evaluate_validate_sampler = TestSampler(hdf5s_dir=hdf5s_dir, 
+    #     split='validation', segment_seconds=segment_seconds, hop_seconds=hop_seconds, 
+    #     batch_size=batch_size, mini_data=mini_data)
 
     evaluate_test_sampler = TestSampler(hdf5s_dir=hdf5s_dir, 
         split='test', segment_seconds=segment_seconds, hop_seconds=hop_seconds, 
@@ -170,9 +170,9 @@ def train(args):
         batch_sampler=evaluate_train_sampler, collate_fn=collate_fn, 
         num_workers=num_workers, pin_memory=True)
 
-    validate_loader = torch.utils.data.DataLoader(dataset=evaluate_dataset, 
-        batch_sampler=evaluate_validate_sampler, collate_fn=collate_fn, 
-        num_workers=num_workers, pin_memory=True)
+    # validate_loader = torch.utils.data.DataLoader(dataset=evaluate_dataset, 
+    #     batch_sampler=evaluate_validate_sampler, collate_fn=collate_fn, 
+    #     num_workers=num_workers, pin_memory=True)
 
     test_loader = torch.utils.data.DataLoader(dataset=evaluate_dataset, 
         batch_sampler=evaluate_test_sampler, collate_fn=collate_fn, 
@@ -226,30 +226,30 @@ def train(args):
             train_fin_time = time.time()
 
             evaluate_train_statistics = evaluator.evaluate(evaluate_train_loader)
-            validate_statistics = evaluator.evaluate(validate_loader)
+            # validate_statistics = evaluator.evaluate(validate_loader)
             test_statistics = evaluator.evaluate(test_loader)
 
             logging.info('    Train statistics: {}'.format(evaluate_train_statistics))
-            logging.info('    Validation statistics: {}'.format(validate_statistics))
+            # logging.info('    Validation statistics: {}'.format(validate_statistics))
             logging.info('    Test statistics: {}'.format(test_statistics))
 
             statistics_container.append(iteration, evaluate_train_statistics, data_type='train')
-            statistics_container.append(iteration, validate_statistics, data_type='validation')
+            # statistics_container.append(iteration, validate_statistics, data_type='validation')
             statistics_container.append(iteration, test_statistics, data_type='test')
             statistics_container.dump()
 
             train_time = train_fin_time - train_bgn_time
-            validate_time = time.time() - train_fin_time
+            # validate_time = time.time() - train_fin_time
 
             logging.info(
-                'Train time: {:.3f} s, validate time: {:.3f} s'
-                ''.format(train_time, validate_time))
+                'Train time: {:.3f} s'
+                ''.format(train_time))
 
             train_bgn_time = time.time()
             
-            val_frame.append(validate_statistics['frame_ap'])
-            val_reg_onset.append(validate_statistics['reg_onset_mae'])
-            val_reg_offset.append(validate_statistics['reg_offset_mae'])
+            # val_frame.append(validate_statistics['frame_ap'])
+            # val_reg_onset.append(validate_statistics['reg_onset_mae'])
+            # val_reg_offset.append(validate_statistics['reg_offset_mae'])
             
             train_frame.append(evaluate_train_statistics['frame_ap'])
             train_reg_onset.append(evaluate_train_statistics['reg_onset_mae'])
@@ -317,8 +317,8 @@ def train(args):
             axs[6].set_yscale('log')
             axs[6].set_xlabel("train_reg_offset")  
             
-            plt.savefig('/content/drive/MyDrive/532Project/MelTraining/workspaceOrigMel/Attention_Gru.png')
-            fileData = open("/content/drive/MyDrive/532Project/MelTraining/workspaceOrigMel/AttentionGru.txt","a+") 
+            plt.savefig('/content/drive/MyDrive/532Project/MelTraining/musicnetorig/Attention_Gru.png')
+            fileData = open("/content/drive/MyDrive/532Project/MelTraining/musicnetorig/AttentionGru.txt","a+") 
             fileData.writelines([str(loss.item()), " ", str(iteration)])
             fileData.write("\n")
             fileData.close()
