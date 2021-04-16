@@ -37,7 +37,7 @@ class PianoTranscription(object):
         else:
             self.device = 'cpu'
 
-        self.segment_samples = segment_samples
+        self.segment_samples = int(segment_samples)
         self.post_processor_type = post_processor_type
         self.frames_per_second = config.frames_per_second
         self.classes_num = config.classes_num
@@ -146,7 +146,7 @@ class PianoTranscription(object):
         Returns:
           batch: (N, segment_samples)
         """
-        assert x.shape[1] % segment_samples == 0
+        # assert x.shape[1] % segment_samples == 0
         batch = []
 
         pointer = 0
@@ -175,13 +175,13 @@ class PianoTranscription(object):
             'center=True' argument when calculating spectrogram."""
             (N, segment_samples, classes_num) = x.shape
             print(x.shape)
-            # assert segment_samples % 4 == 0
+            assert segment_samples % 4 == 0
 
             y = []
-            y.append(x[0, 0 : int(segment_samples * 0.8)])
+            y.append(x[0, 0 : int(segment_samples * 0.75)])
             for i in range(1, N - 1):
-                y.append(x[i, int(segment_samples * 0.2) : int(segment_samples * 0.8)])
-            y.append(x[-1, int(segment_samples * 0.2) :])
+                y.append(x[i, int(segment_samples * 0.25) : int(segment_samples * 0.75)])
+            y.append(x[-1, int(segment_samples * 0.25) :])
             y = np.concatenate(y, axis=0)
             return y
 
@@ -207,7 +207,7 @@ def inference(args):
     audio_path = args.audio_path
     
     sample_rate = config.sample_rate
-    segment_samples = sample_rate * 5
+    segment_samples = sample_rate * 5.2
     print(segment_samples)
     """Split audio to multiple 10-second segments for inference"""
 

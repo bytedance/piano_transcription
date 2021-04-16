@@ -100,6 +100,57 @@ class ConvBlock(nn.Module):
         
         return x
 
+# class AcousticModelCRnn8Dropout(nn.Module):
+#     def __init__(self, classes_num, midfeat, momentum):
+#         super(AcousticModelCRnn8Dropout, self).__init__()
+
+#         self.conv_block1 = ConvBlock(in_channels=1, out_channels=48, momentum=momentum)
+#         self.conv_block2 = ConvBlock(in_channels=48, out_channels=64, momentum=momentum)
+#         self.conv_block3 = ConvBlock(in_channels=64, out_channels=96, momentum=momentum)
+#         self.conv_block4 = ConvBlock(in_channels=96, out_channels=128, momentum=momentum)
+
+#         self.fc5 = nn.Linear(midfeat, 768, bias=False)
+#         self.bn5 = nn.BatchNorm1d(768, momentum=momentum)
+
+#         self.gru = nn.GRU(input_size=768, hidden_size=256, num_layers=2, 
+#             bias=True, batch_first=True, dropout=0., bidirectional=True)
+
+#         self.fc = nn.Linear(512, classes_num, bias=True)
+        
+#         self.init_weight()
+
+#     def init_weight(self):
+#         init_layer(self.fc5)
+#         init_bn(self.bn5)
+#         init_gru(self.gru)
+#         init_layer(self.fc)
+
+#     def forward(self, input):
+#         """
+#         Args:
+#           input: (batch_size, channels_num, time_steps, freq_bins)
+
+#         Outputs:
+#           output: (batch_size, time_steps, classes_num)
+#         """
+
+#         x = self.conv_block1(input, pool_size=(1, 2), pool_type='avg')
+#         x = F.dropout(x, p=0.2, training=self.training)
+#         x = self.conv_block2(x, pool_size=(1, 2), pool_type='avg')
+#         x = F.dropout(x, p=0.2, training=self.training)
+#         x = self.conv_block3(x, pool_size=(1, 2), pool_type='avg')
+#         x = F.dropout(x, p=0.2, training=self.training)
+#         x = self.conv_block4(x, pool_size=(1, 2), pool_type='avg')
+#         x = F.dropout(x, p=0.2, training=self.training)
+
+#         x = x.transpose(1, 2).flatten(2)
+#         x = F.relu(self.bn5(self.fc5(x).transpose(1, 2)).transpose(1, 2))
+#         x = F.dropout(x, p=0.5, training=self.training, inplace=True)
+        
+#         (x, _) = self.gru(x)
+#         x = F.dropout(x, p=0.5, training=self.training, inplace=False)
+#         output = torch.sigmoid(self.fc(x))
+#         return output
 
 class AcousticModelCRnn8Dropout(nn.Module):
     def __init__(self, classes_num, midfeat, momentum):
@@ -166,7 +217,7 @@ class AcousticModelCRnn8Dropout(nn.Module):
         x = self.attn(x)
         # print("post attn, ", x.shape)
         x = x.transpose(1,2)
-        x = torch.reshape(x, (x.shape[0], x.shape[1], 251, 14))
+        x = torch.reshape(x, (x.shape[0], x.shape[1], 261, 14))
         # print("post stuff", x.shape)
         x = x.transpose(1, 2).flatten(2)
         # print("pre fc", x.shape)
