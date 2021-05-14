@@ -44,6 +44,25 @@ def train(args):
       mini_data: bool
     """
 
+    axs=[]
+    f = plt.figure(figsize=(10,10))
+    axs.append(f.add_subplot(2,4,1))
+    axs.append(f.add_subplot(2,4,2))
+    axs.append(f.add_subplot(2,4,3))
+    axs.append(f.add_subplot(2,4,4))
+    axs.append(f.add_subplot(2,4,5))
+    axs.append(f.add_subplot(2,4,6))
+    axs.append(f.add_subplot(2,4,7))
+    losses = []
+    
+    val_frame = []
+    val_reg_onset = []
+    val_reg_offset = []
+    
+    train_frame = []
+    train_reg_onset = []
+    train_reg_offset = []
+
     # Arugments & parameters
     workspace = args.workspace
     model_type = args.model_type
@@ -134,9 +153,9 @@ def train(args):
         split='train', segment_seconds=segment_seconds, hop_seconds=hop_seconds, 
         batch_size=batch_size, mini_data=mini_data)
 
-    evaluate_validate_sampler = TestSampler(hdf5s_dir=hdf5s_dir, 
-        split='validation', segment_seconds=segment_seconds, hop_seconds=hop_seconds, 
-        batch_size=batch_size, mini_data=mini_data)
+    # evaluate_validate_sampler = TestSampler(hdf5s_dir=hdf5s_dir, 
+    #     split='validation', segment_seconds=segment_seconds, hop_seconds=hop_seconds, 
+    #     batch_size=batch_size, mini_data=mini_data)
 
     evaluate_test_sampler = TestSampler(hdf5s_dir=hdf5s_dir, 
         split='test', segment_seconds=segment_seconds, hop_seconds=hop_seconds, 
@@ -151,9 +170,9 @@ def train(args):
         batch_sampler=evaluate_train_sampler, collate_fn=collate_fn, 
         num_workers=num_workers, pin_memory=True)
 
-    validate_loader = torch.utils.data.DataLoader(dataset=evaluate_dataset, 
-        batch_sampler=evaluate_validate_sampler, collate_fn=collate_fn, 
-        num_workers=num_workers, pin_memory=True)
+    # validate_loader = torch.utils.data.DataLoader(dataset=evaluate_dataset, 
+    #     batch_sampler=evaluate_validate_sampler, collate_fn=collate_fn, 
+    #     num_workers=num_workers, pin_memory=True)
 
     test_loader = torch.utils.data.DataLoader(dataset=evaluate_dataset, 
         batch_sampler=evaluate_test_sampler, collate_fn=collate_fn, 
@@ -173,7 +192,7 @@ def train(args):
     if resume_iteration > 0:
         resume_checkpoint_path = os.path.join(workspace, 'checkpoints', filename, 
             model_type, 'loss_type={}'.format(loss_type), 
-            'augmentation={}'.format(augmentation), 'batch_size={}'.format(batch_size), 
+            'augmentation={}'.format(augmentation),'max_note_shift=0', 'batch_size={}'.format(batch_size), 
                 '{}_iterations.pth'.format(resume_iteration))
 
         logging.info('Loading checkpoint {}'.format(resume_checkpoint_path))
@@ -185,6 +204,8 @@ def train(args):
 
     else:
         iteration = 0
+
+    # print("iterationLoad", iterationLoad)
     
     # Parallel
     print('GPU number: {}'.format(torch.cuda.device_count()))
@@ -195,8 +216,8 @@ def train(args):
 
     train_bgn_time = time.time()
 
-    for batch_data_dict in train_loader:
-        
+    for batch_data_dict in train_loader:    
+    
         # Evaluation 
         if iteration % 5000 == 0:# and iteration > 0:
             logging.info('------------------------------------')
@@ -205,29 +226,37 @@ def train(args):
             train_fin_time = time.time()
 
             evaluate_train_statistics = evaluator.evaluate(evaluate_train_loader)
-            validate_statistics = evaluator.evaluate(validate_loader)
+            # validate_statistics = evaluator.evaluate(validate_loader)
             test_statistics = evaluator.evaluate(test_loader)
 
             logging.info('    Train statistics: {}'.format(evaluate_train_statistics))
-            logging.info('    Validation statistics: {}'.format(validate_statistics))
+            # logging.info('    Validation statistics: {}'.format(validate_statistics))
             logging.info('    Test statistics: {}'.format(test_statistics))
 
             statistics_container.append(iteration, evaluate_train_statistics, data_type='train')
-            statistics_container.append(iteration, validate_statistics, data_type='validation')
+            # statistics_container.append(iteration, validate_statistics, data_type='validation')
             statistics_container.append(iteration, test_statistics, data_type='test')
             statistics_container.dump()
 
             train_time = train_fin_time - train_bgn_time
-            validate_time = time.time() - train_fin_time
+            # validate_time = time.time() - train_fin_time
 
             logging.info(
-                'Train time: {:.3f} s, validate time: {:.3f} s'
-                ''.format(train_time, validate_time))
+                'Train time: {:.3f} s'
+                ''.format(train_time))
 
             train_bgn_time = time.time()
+            
+            # val_frame.append(validate_statistics['frame_ap'])
+            # val_reg_onset.append(validate_statistics['reg_onset_mae'])
+            # val_reg_offset.append(validate_statistics['reg_offset_mae'])
+            
+            train_frame.append(evaluate_train_statistics['frame_ap'])
+            train_reg_onset.append(evaluate_train_statistics['reg_onset_mae'])
+            train_reg_offset.append(evaluate_train_statistics['reg_offset_mae'])
         
         # Save model
-        if iteration % 20000 == 0:
+        if iteration % 1000 == 0:
             checkpoint = {
                 'iteration': iteration, 
                 'model': model.module.state_dict(), 
@@ -247,25 +276,67 @@ def train(args):
         # Move data to device
         for key in batch_data_dict.keys():
             batch_data_dict[key] = move_data_to_device(batch_data_dict[key], device)
-         
+        
         model.train()
         batch_output_dict = model(batch_data_dict['waveform'])
 
         loss = loss_func(model, batch_output_dict, batch_data_dict)
 
-        print(iteration, loss)
-
         # Backward
         loss.backward()
         
-        optimizer.step()
-        optimizer.zero_grad()
+        losses.append(loss.item())
+
+        if iteration % 1000 == 0:
+            #print(loss, iteration, "LOSS")
+            axs[0].plot(losses)
+            axs[0].set_yscale('log')
+            axs[0].set_xlabel("losses")
+            # clear output window and diplay updated figure
+            axs[1].plot(val_frame)
+            axs[1].set_yscale('log')
+            axs[1].set_xlabel("val_frame")
+            
+            axs[2].plot(val_reg_onset)
+            axs[2].set_yscale('log')
+            axs[2].set_xlabel("val_reg_onset")
+            # clear output window and diplay updated figure
+            axs[3].plot(val_reg_offset)
+            axs[3].set_yscale('log')
+            axs[3].set_xlabel("val_reg_offset")  
+        
+            axs[4].plot(train_frame)
+            axs[4].set_yscale('log')
+            axs[4].set_xlabel("train_frame") 
+            # clear output window and diplay updated figure
+            axs[5].plot(train_reg_onset)
+            axs[5].set_yscale('log')
+            axs[5].set_xlabel("train_reg_onset")   
+            # clear output window and diplay updated figure
+            axs[6].plot(train_reg_offset)
+            axs[6].set_yscale('log')
+            axs[6].set_xlabel("train_reg_offset")  
+            
+            plt.savefig('/content/drive/MyDrive/532Project/MelTraining/musicnetorig/Attention_Gru.png')
+            fileData = open("/content/drive/MyDrive/532Project/MelTraining/musicnetorig/AttentionGru.txt","a+") 
+            fileData.writelines([str(loss.item()), " ", str(iteration)])
+            fileData.write("\n")
+            fileData.close()
+            #plt.show()
+        
+        if iteration % 100 == 0:
+            print(loss, iteration, "LOSS")
+        
+        if iteration % 2 != 0:
+            optimizer.step()
+            optimizer.zero_grad()
         
         # Stop learning
         if iteration == early_stop:
             break
 
         iteration += 1
+        # print("iteration", iteration)
 
 
 if __name__ == '__main__':

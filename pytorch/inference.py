@@ -37,12 +37,12 @@ class PianoTranscription(object):
         else:
             self.device = 'cpu'
 
-        self.segment_samples = segment_samples
+        self.segment_samples = int(segment_samples)
         self.post_processor_type = post_processor_type
         self.frames_per_second = config.frames_per_second
         self.classes_num = config.classes_num
-        self.onset_threshold = 0.3
-        self.offset_threshod = 0.3
+        self.onset_threshold = 0.1
+        self.offset_threshod = 0.1
         self.frame_threshold = 0.1
         self.pedal_offset_threshold = 0.2
 
@@ -146,7 +146,7 @@ class PianoTranscription(object):
         Returns:
           batch: (N, segment_samples)
         """
-        assert x.shape[1] % segment_samples == 0
+        # assert x.shape[1] % segment_samples == 0
         batch = []
 
         pointer = 0
@@ -174,6 +174,7 @@ class PianoTranscription(object):
             """Remove an extra frame in the end of each segment caused by the
             'center=True' argument when calculating spectrogram."""
             (N, segment_samples, classes_num) = x.shape
+            print(x.shape)
             assert segment_samples % 4 == 0
 
             y = []
@@ -206,11 +207,12 @@ def inference(args):
     audio_path = args.audio_path
     
     sample_rate = config.sample_rate
-    segment_samples = sample_rate * 10  
+    segment_samples = sample_rate * 5.2
+    print(segment_samples)
     """Split audio to multiple 10-second segments for inference"""
 
     # Paths
-    midi_path = 'results/{}.mid'.format(get_filename(audio_path))
+    midi_path = 'results_{}/{}.mid'.format(checkpoint_path.split("/")[-1], get_filename(audio_path))
     create_folder(os.path.dirname(midi_path))
  
     # Load audio
@@ -227,25 +229,25 @@ def inference(args):
     print('Transcribe time: {:.3f} s'.format(time.time() - transcribe_time))
 
     # Visualize for debug
-    plot = False
+    plot = True
     if plot:
         output_dict = transcribed_dict['output_dict']
         fig, axs = plt.subplots(5, 1, figsize=(15, 8), sharex=True)
-        mel = librosa.feature.melspectrogram(audio, sr=16000, n_fft=2048, hop_length=160, n_mels=229, fmin=30, fmax=8000)
+        mel = librosa.feature.melspectrogram(audio, sr=44100, n_fft=2048, hop_length=882, n_mels=229, fmin=30, fmax=8000)
         axs[0].matshow(np.log(mel), origin='lower', aspect='auto', cmap='jet')
         axs[1].matshow(output_dict['frame_output'].T, origin='lower', aspect='auto', cmap='jet')
         axs[2].matshow(output_dict['reg_onset_output'].T, origin='lower', aspect='auto', cmap='jet')
         axs[3].matshow(output_dict['reg_offset_output'].T, origin='lower', aspect='auto', cmap='jet')
-        axs[4].plot(output_dict['pedal_frame_output'])
+        # axs[4].plot(output_dict['pedal_frame_output'])
         axs[0].set_xlim(0, len(output_dict['frame_output']))
-        axs[4].set_xlabel('Frames')
+        # axs[4].set_xlabel('Frames')
         axs[0].set_title('Log mel spectrogram')
         axs[1].set_title('frame_output')
         axs[2].set_title('reg_onset_output')
         axs[3].set_title('reg_offset_output')
-        axs[4].set_title('pedal_frame_output')
+        # axs[4].set_title('pedal_frame_output')
         plt.tight_layout(0, .05, 0)
-        fig_path = '_zz.pdf'.format(get_filename(audio_path))
+        fig_path = 'results_{}/{}.pdf'.format(checkpoint_path.split("/")[-1], get_filename(audio_path))
         plt.savefig(fig_path)
         print('Plot to {}'.format(fig_path))
     
