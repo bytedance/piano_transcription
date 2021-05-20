@@ -24,7 +24,7 @@ def transcribe(aud):
 inputs = gr.inputs.Audio(label="Input Audio", type="file")
 outputs =  [
             gr.outputs.File(label="Output Midi"),
-            gr.outputs.Image(label="Output Visualization"),
+            gr.outputs.File(label="Output Visualization"),
             ]
 
 
