@@ -9,3 +9,5 @@ torchlibrosa==0.0.4
 sox==1.4.0
 gradio
 visual_midi
+piano_transcription_inference
+imgkit
