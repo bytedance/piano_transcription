@@ -3,7 +3,6 @@ import gradio as gr
 from visual_midi import Plotter
 from visual_midi import Preset
 from pretty_midi import PrettyMIDI
-import imgkit
 
 
 def transcribe(aud):
@@ -18,9 +17,8 @@ def transcribe(aud):
   pm = PrettyMIDI('./out.mid')
   plotter = Plotter()
   plotter.show(pm, "./example-01.html")
-  imgkit.from_file('./example-01.html', './example-01.jpg')
 
-  return f"./out.mid", f"./example-01.jpg"
+  return f"./out.mid", f"./example-01.html"
 
 
 inputs = gr.inputs.Audio(label="Input Audio", type="file")
