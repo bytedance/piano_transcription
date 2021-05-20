@@ -1,8 +1,16 @@
+import sys
+sys.path.append('utils')
+sys.path.append('pytorch')
 from piano_transcription_inference import PianoTranscription, sample_rate, load_audio
 import gradio as gr
-from visual_midi import Plotter
-from visual_midi import Preset
-from pretty_midi import PrettyMIDI
+import os
+from collections import namedtuple
+from plot_for_paper import plot_midi
+
+os.makedirs("results", exist_ok=True)
+
+
+plot_args = namedtuple('PlotArgs', ['audio_path', 'midi_path'])
 
 
 def transcribe(aud):
@@ -10,21 +18,19 @@ def transcribe(aud):
   (audio, _) = load_audio(aud.name, sr=sample_rate, mono=True)
 
   # Transcriptor
-  transcriptor = PianoTranscription(device='cpu')
+  transcriptor = PianoTranscription(device='cpu')    # 'cuda' | 'cpu'
 
   # Transcribe and write out to MIDI file
   transcribed_dict = transcriptor.transcribe(audio, './out.mid')
-  pm = PrettyMIDI('./out.mid')
-  plotter = Plotter()
-  plotter.show(pm, "./example-01.html")
+  plot_midi(plot_args("input.mp3", 'out.mid'))
 
-  return f"./out.mid", f"./example-01.html"
+  return f"./out.mid", f"results/input.png"
 
 
 inputs = gr.inputs.Audio(label="Input Audio", type="file")
 outputs =  [
             gr.outputs.File(label="Output Midi"),
-            gr.outputs.File(label="Output Visualization"),
+            gr.outputs.Image(type="file", label="Output Visualization"),
             ]
 
 
