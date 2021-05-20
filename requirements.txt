@@ -7,3 +7,5 @@ mir_eval==0.5
 matplotlib==3.0.3
 torchlibrosa==0.0.4
 sox==1.4.0
+gradio
+visual_midi
