@@ -12,3 +12,4 @@ visual_midi
 piano_transcription_inference
 torch
 torchvision
+soundfile
