@@ -11,3 +11,5 @@ gradio
 visual_midi
 piano_transcription_inference
 imgkit
+torch
+torchvision
