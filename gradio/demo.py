@@ -22,9 +22,11 @@ def transcribe(aud):
 
   # Transcribe and write out to MIDI file
   transcribed_dict = transcriptor.transcribe(audio, './out.mid')
-  plot_midi(plot_args("input.mp3", 'out.mid'))
+  audsplit = aud.name.split("p/")
+  split2 = audsplit[1].split(".")
+  plot_midi(plot_args(aud.name, 'out.mid'))
 
-  return f"./out.mid", f"results/input.png"
+  return f"./out.mid", f"results/{split2[0]}.png"
 
 
 inputs = gr.inputs.Audio(label="Input Audio", type="file")
