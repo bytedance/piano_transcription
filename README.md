@@ -6,6 +6,9 @@ Piano transcription is the task of transcribing piano recordings into MIDI files
 ## Demos
 Here is a demo of our piano transcription system: https://www.youtube.com/watch?v=5U-WL0QvKCg
 
+## Gradio Web Demo
+[Web Demo](https://gradio.app/hub/AK391/piano_transcription)
+
 ## Environments
 This codebase is developed with Python 3.7 and PyTorch 1.4.0 (Should work with other versions, but not fully tested).
 
