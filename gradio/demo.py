@@ -12,13 +12,13 @@ os.makedirs("results", exist_ok=True)
 
 plot_args = namedtuple('PlotArgs', ['audio_path', 'midi_path'])
 
+# Transcriptor
+transcriptor = PianoTranscription(device='cpu')    # 'cuda' | 'cpu'
+
 
 def transcribe(aud):
   # Load audio
   (audio, _) = load_audio(aud.name, sr=sample_rate, mono=True)
-
-  # Transcriptor
-  transcriptor = PianoTranscription(device='cpu')    # 'cuda' | 'cpu'
 
   # Transcribe and write out to MIDI file
   transcribed_dict = transcriptor.transcribe(audio, './out.mid')
