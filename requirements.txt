@@ -7,3 +7,4 @@ mir_eval==0.5
 matplotlib==3.0.3
 torchlibrosa==0.0.4
 sox==1.4.0
+SoundFile==0.10.3.post1
